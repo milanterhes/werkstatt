@@ -1,6 +1,6 @@
 "use client";
 import { authClient } from "@/lib/auth-client";
-import { useQuery } from "@tanstack/react-query";
+import { trpc } from "@/lib/trpc";
 import { useRouter } from "next/navigation";
 import { CreateOrganizationForm } from "./create-organization-form";
 import { OnboardingFlow } from "./onboarding-flow";
@@ -14,18 +14,12 @@ const Home = () => {
   const router = useRouter();
 
   // Check if workshop details exist
-  const { data: workshopDetails } = useQuery({
-    queryKey: ["workshop-details"],
-    queryFn: async () => {
-      const response = await fetch("/api/workshop-details");
-      if (!response.ok) {
-        return null;
-      }
-      const result = await response.json();
-      return result.data;
-    },
-    enabled: !!activeOrganization.data?.id,
-  });
+  const { data: workshopDetails } = trpc.workshop.getDetails.useQuery(
+    undefined,
+    {
+      enabled: !!activeOrganization.data?.id,
+    }
+  );
 
   async function handleSignOut() {
     const result = await authClient.signOut();

@@ -1,24 +1,27 @@
 "use client";
-import { WorkshopDetailsForm } from "@/components/workshop-details-form";
-import { useQuery } from "@tanstack/react-query";
-import { Spinner } from "@/components/ui/spinner";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { WorkshopDetailsForm } from "@/components/workshop-details-form";
+import type { WorkshopDetailsFormInput } from "@/lib/db/schemas";
+import { trpc } from "@/lib/trpc";
+import { useRouter } from "next/navigation";
 
 export default function Settings() {
   const router = useRouter();
 
-  const { data: workshopDetails, isLoading } = useQuery({
-    queryKey: ["workshop-details"],
-    queryFn: async () => {
-      const response = await fetch("/api/workshop-details");
-      if (!response.ok) {
-        return null;
-      }
-      const result = await response.json();
-      return result.data;
-    },
-  });
+  const { data: workshopDetails, isLoading } =
+    trpc.workshop.getDetails.useQuery();
+
+  // Exclude database-specific fields (id, organizationId, createdAt, updatedAt)
+  const formData: Partial<WorkshopDetailsFormInput> | null | undefined =
+    workshopDetails
+      ? (Object.fromEntries(
+          Object.entries(workshopDetails).filter(
+            ([key]) =>
+              !["id", "organizationId", "createdAt", "updatedAt"].includes(key)
+          )
+        ) as Partial<WorkshopDetailsFormInput>)
+      : null;
 
   if (isLoading) {
     return (
@@ -41,8 +44,7 @@ export default function Settings() {
           Back to Dashboard
         </Button>
       </div>
-      <WorkshopDetailsForm initialData={workshopDetails} />
+      <WorkshopDetailsForm initialData={formData} />
     </div>
   );
 }
-

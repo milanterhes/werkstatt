@@ -288,6 +288,7 @@ export function WorkshopDetailsForm({
                       <FieldLabel htmlFor="email">Business Email</FieldLabel>
                       <Input
                         {...field}
+                        value={field.value ?? ""}
                         id="email"
                         type="email"
                         placeholder="info@workshop.de"
@@ -306,6 +307,7 @@ export function WorkshopDetailsForm({
                       <FieldLabel htmlFor="website">Website</FieldLabel>
                       <Input
                         {...field}
+                        value={field.value ?? ""}
                         id="website"
                         type="url"
                         placeholder="https://www.workshop.de"

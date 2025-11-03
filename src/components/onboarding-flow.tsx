@@ -8,9 +8,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { WorkshopDetailsFormInput } from "@/lib/db/schemas";
+import type { WorkshopDetailsFormInput } from "@/lib/db/schemas";
+import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
 import { AlertCircle, CheckCircle2, Circle } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -132,17 +132,18 @@ function OnboardingGoalItem({
 export function OnboardingFlow() {
   const router = useRouter();
 
-  const { data: workshopDetails, isLoading } = useQuery({
-    queryKey: ["workshop-details"],
-    queryFn: async () => {
-      const response = await fetch("/api/workshop-details");
-      if (!response.ok) {
-        throw new Error("Failed to fetch workshop details");
-      }
-      const result = await response.json();
-      return result.data;
-    },
-  });
+  const { data: workshopDetails, isLoading } =
+    trpc.workshop.getDetails.useQuery();
+
+  // Exclude database-specific fields (id, organizationId, createdAt, updatedAt)
+  const formData: WorkshopDetailsFormInput | undefined = workshopDetails
+    ? (Object.fromEntries(
+        Object.entries(workshopDetails).filter(
+          ([key]) =>
+            !["id", "organizationId", "createdAt", "updatedAt"].includes(key)
+        )
+      ) as WorkshopDetailsFormInput)
+    : undefined;
 
   if (isLoading) {
     return (
@@ -155,7 +156,7 @@ export function OnboardingFlow() {
   }
 
   const completedGoals = onboardingGoals.filter((goal) =>
-    goal.check(workshopDetails)
+    goal.check(formData ?? {})
   );
   const progress = Math.round(
     (completedGoals.length / onboardingGoals.length) * 100
@@ -196,7 +197,7 @@ export function OnboardingFlow() {
               <OnboardingGoalItem
                 key={goal.id}
                 goal={goal}
-                completed={goal.check(workshopDetails)}
+                completed={goal.check(formData ?? {})}
               />
             ))}
           </div>

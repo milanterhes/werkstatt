@@ -94,13 +94,13 @@ export const workshopDetailsFormSchema = workshopDetailsInsertSchema
   .extend({
     email: z
       .string()
-      .optional()
+      .nullish()
       .refine((val) => !val || z.string().email().safeParse(val).success, {
         message: "Invalid email address",
       }),
     website: z
       .string()
-      .optional()
+      .nullish()
       .refine((val) => !val || z.string().url().safeParse(val).success, {
         message: "Invalid URL",
       }),
