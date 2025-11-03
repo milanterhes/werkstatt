@@ -441,8 +441,13 @@ export function WorkshopDetailsForm({
                           type="number"
                           min={1}
                           max={365}
+                          value={field.value ?? undefined}
                           onChange={(e) =>
-                            field.onChange(Number(e.target.value))
+                            field.onChange(
+                              e.target.value
+                                ? Number(e.target.value)
+                                : undefined
+                            )
                           }
                         />
                         {fieldState.invalid && (
@@ -465,6 +470,7 @@ export function WorkshopDetailsForm({
                           type="text"
                           maxLength={3}
                           placeholder="EUR"
+                          value={field.value ?? ""}
                         />
                         {fieldState.invalid && (
                           <FieldError errors={[fieldState.error]} />
@@ -485,6 +491,7 @@ export function WorkshopDetailsForm({
                           id="invoicePrefix"
                           type="text"
                           placeholder="RE"
+                          value={field.value ?? ""}
                         />
                         {fieldState.invalid && (
                           <FieldError errors={[fieldState.error]} />

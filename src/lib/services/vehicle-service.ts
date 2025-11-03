@@ -1,9 +1,11 @@
 import db from "@/lib/db";
 import { vehicles } from "@/lib/db/customer-schema";
-import { eq, and } from "drizzle-orm";
+import type { Vehicle, VehicleInput } from "@/lib/db/schemas";
+import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { Result, err, ok } from "neverthrow";
-import type { Vehicle, VehicleInput } from "@/lib/db/schemas";
+
+export type { VehicleInput };
 
 export interface VehicleFilters {
   customerId?: string;
@@ -95,7 +97,9 @@ export async function createVehicle(
 
 export async function updateVehicle(
   id: string,
-  data: Partial<Omit<VehicleInput, "id" | "organizationId" | "createdAt" | "updatedAt">>,
+  data: Partial<
+    Omit<VehicleInput, "id" | "organizationId" | "createdAt" | "updatedAt">
+  >,
   organizationId: string
 ): Promise<Result<Vehicle, Error>> {
   try {
@@ -153,4 +157,3 @@ export async function deleteVehicle(
     );
   }
 }
-

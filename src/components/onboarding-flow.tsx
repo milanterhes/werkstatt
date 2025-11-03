@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { WorkshopDetailsFormInput } from "@/lib/db/schemas";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { AlertCircle, CheckCircle2, Circle } from "lucide-react";
@@ -17,7 +18,7 @@ interface OnboardingGoal {
   id: string;
   title: string;
   description: string;
-  check: (details: any) => boolean;
+  check: (details: WorkshopDetailsFormInput) => boolean;
   priority: "high" | "medium" | "low";
 }
 

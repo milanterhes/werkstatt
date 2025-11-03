@@ -17,14 +17,14 @@ import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import * as React from "react";
+import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
 import { Button } from "./ui/button";
 import { Spinner } from "./ui/spinner";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import * as React from "react";
 
 const organizationSchema = z.object({
   name: z.string().min(1, "Organization name is required"),
@@ -64,9 +64,9 @@ export function CreateOrganizationForm({
     },
     onSuccess: async (data) => {
       // Set the newly created organization as active
-      if (data?.organization?.id) {
+      if (data?.id) {
         await authClient.organization.setActive({
-          organizationId: data.organization.id,
+          organizationId: data.id,
         });
       }
       toast.success("Organization created successfully");
@@ -96,7 +96,7 @@ export function CreateOrganizationForm({
   }, [nameValue, isSlugManuallyEdited, form]);
 
   // Track if user manually edits the slug
-  const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSlugChange = () => {
     setIsSlugManuallyEdited(true);
   };
 
@@ -104,7 +104,9 @@ export function CreateOrganizationForm({
     createOrganizationMutation.mutate(values, {
       onError: (error) => {
         toast.error(
-          error instanceof Error ? error.message : "Failed to create organization"
+          error instanceof Error
+            ? error.message
+            : "Failed to create organization"
         );
       },
     });
@@ -156,7 +158,7 @@ export function CreateOrganizationForm({
                       placeholder="my-workshop"
                       autoComplete="off"
                       onChange={(e) => {
-                        handleSlugChange(e);
+                        handleSlugChange();
                         field.onChange(e);
                       }}
                     />
@@ -167,7 +169,10 @@ export function CreateOrganizationForm({
                 )}
               />
               <Field>
-                <Button type="submit" disabled={createOrganizationMutation.isPending}>
+                <Button
+                  type="submit"
+                  disabled={createOrganizationMutation.isPending}
+                >
                   {createOrganizationMutation.isPending && <Spinner />}
                   {createOrganizationMutation.isPending
                     ? "Creating..."
@@ -181,4 +186,3 @@ export function CreateOrganizationForm({
     </div>
   );
 }
-

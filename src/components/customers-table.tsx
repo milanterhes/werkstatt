@@ -1,5 +1,4 @@
 "use client";
-import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,6 +9,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -18,20 +18,27 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import type { Customer } from "@/lib/db/schemas";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  useReactTable,
+  flexRender,
   getCoreRowModel,
   getSortedRowModel,
-  flexRender,
+  useReactTable,
   type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
-import { CustomerForm } from "./customer-form";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useMemo } from "react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Pencil, Trash2, Plus, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
-import type { Customer } from "@/lib/db/schemas";
+import { CustomerForm } from "./customer-form";
 
 export function CustomersTable() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
@@ -188,7 +195,21 @@ export function CustomersTable() {
       <CustomerForm
         open={isFormOpen}
         onOpenChange={setIsFormOpen}
-        initialData={selectedCustomer}
+        initialData={
+          selectedCustomer
+            ? {
+                ...selectedCustomer,
+                id: selectedCustomer.id,
+                email: selectedCustomer.email ?? undefined,
+                phone: selectedCustomer.phone ?? undefined,
+                street: selectedCustomer.street ?? undefined,
+                houseNumber: selectedCustomer.houseNumber ?? undefined,
+                postalCode: selectedCustomer.postalCode ?? undefined,
+                city: selectedCustomer.city ?? undefined,
+                country: selectedCustomer.country ?? undefined,
+              }
+            : null
+        }
       />
 
       {customerList.length === 0 ? (

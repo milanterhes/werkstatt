@@ -1,9 +1,11 @@
 import db from "@/lib/db";
 import { customers } from "@/lib/db/customer-schema";
-import { eq, and } from "drizzle-orm";
+import type { Customer, CustomerInput } from "@/lib/db/schemas";
+import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { Result, err, ok } from "neverthrow";
-import type { Customer, CustomerInput } from "@/lib/db/schemas";
+
+export type { CustomerInput };
 
 export async function getCustomers(
   organizationId: string
@@ -17,9 +19,7 @@ export async function getCustomers(
     return ok(result);
   } catch (error) {
     return err(
-      error instanceof Error
-        ? error
-        : new Error("Failed to fetch customers")
+      error instanceof Error ? error : new Error("Failed to fetch customers")
     );
   }
 }
@@ -44,15 +44,16 @@ export async function getCustomerById(
     return ok(result[0]);
   } catch (error) {
     return err(
-      error instanceof Error
-        ? error
-        : new Error("Failed to fetch customer")
+      error instanceof Error ? error : new Error("Failed to fetch customer")
     );
   }
 }
 
 export async function createCustomer(
-  data: Omit<CustomerInput, "id" | "organizationId" | "createdAt" | "updatedAt">,
+  data: Omit<
+    CustomerInput,
+    "id" | "organizationId" | "createdAt" | "updatedAt"
+  >,
   organizationId: string
 ): Promise<Result<Customer, Error>> {
   try {
@@ -76,16 +77,16 @@ export async function createCustomer(
     return ok(result[0]);
   } catch (error) {
     return err(
-      error instanceof Error
-        ? error
-        : new Error("Failed to create customer")
+      error instanceof Error ? error : new Error("Failed to create customer")
     );
   }
 }
 
 export async function updateCustomer(
   id: string,
-  data: Partial<Omit<CustomerInput, "id" | "organizationId" | "createdAt" | "updatedAt">>,
+  data: Partial<
+    Omit<CustomerInput, "id" | "organizationId" | "createdAt" | "updatedAt">
+  >,
   organizationId: string
 ): Promise<Result<Customer, Error>> {
   try {
@@ -115,9 +116,7 @@ export async function updateCustomer(
     return ok(result[0]);
   } catch (error) {
     return err(
-      error instanceof Error
-        ? error
-        : new Error("Failed to update customer")
+      error instanceof Error ? error : new Error("Failed to update customer")
     );
   }
 }
@@ -141,10 +140,7 @@ export async function deleteCustomer(
     return ok(undefined);
   } catch (error) {
     return err(
-      error instanceof Error
-        ? error
-        : new Error("Failed to delete customer")
+      error instanceof Error ? error : new Error("Failed to delete customer")
     );
   }
 }
-

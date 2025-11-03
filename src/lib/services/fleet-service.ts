@@ -1,9 +1,11 @@
 import db from "@/lib/db";
 import { fleets } from "@/lib/db/customer-schema";
-import { eq, and } from "drizzle-orm";
+import type { Fleet, FleetInput } from "@/lib/db/schemas";
+import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { Result, err, ok } from "neverthrow";
-import type { Fleet, FleetInput } from "@/lib/db/schemas";
+
+export type { FleetInput };
 
 export async function getFleets(
   organizationId: string
@@ -77,7 +79,9 @@ export async function createFleet(
 
 export async function updateFleet(
   id: string,
-  data: Partial<Omit<FleetInput, "id" | "organizationId" | "createdAt" | "updatedAt">>,
+  data: Partial<
+    Omit<FleetInput, "id" | "organizationId" | "createdAt" | "updatedAt">
+  >,
   organizationId: string
 ): Promise<Result<Fleet, Error>> {
   try {
@@ -95,9 +99,7 @@ export async function updateFleet(
         ...cleanedData,
         updatedAt: new Date(),
       })
-      .where(
-        and(eq(fleets.id, id), eq(fleets.organizationId, organizationId))
-      )
+      .where(and(eq(fleets.id, id), eq(fleets.organizationId, organizationId)))
       .returning();
 
     if (result.length === 0) {
@@ -133,4 +135,3 @@ export async function deleteFleet(
     );
   }
 }
-
