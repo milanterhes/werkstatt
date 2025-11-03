@@ -10,6 +10,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -26,7 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { Customer, Fleet, Vehicle } from "@/lib/db/schemas";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { trpc } from "@/lib/trpc";
 import {
   flexRender,
   getCoreRowModel,
@@ -56,76 +57,26 @@ export function VehiclesTable() {
   const [customerFilter, setCustomerFilter] = useState<string>("__all__");
   const [fleetFilter, setFleetFilter] = useState<string>("__all__");
   const [sorting, setSorting] = useState<SortingState>([]);
-  const queryClient = useQueryClient();
+  const utils = trpc.useUtils();
 
-  const { data: vehicles, isLoading } = useQuery<{ data: Vehicle[] }>({
-    queryKey: [
-      "vehicles",
-      customerFilter !== "__all__" ? customerFilter : null,
-      fleetFilter !== "__all__" ? fleetFilter : null,
-    ],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (customerFilter !== "__all__") {
-        params.append("customerId", customerFilter);
-      }
-      if (fleetFilter !== "__all__") {
-        params.append("fleetId", fleetFilter);
-      }
-      const url = `/api/vehicles${
-        params.toString() ? `?${params.toString()}` : ""
-      }`;
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error("Failed to fetch vehicles");
-      }
-      return response.json();
-    },
+  const { data: vehicles = [], isLoading } = trpc.vehicles.list.useQuery({
+    customerId: customerFilter !== "__all__" ? customerFilter : undefined,
+    fleetId: fleetFilter !== "__all__" ? fleetFilter : undefined,
   });
 
-  const { data: customersData } = useQuery<{ data: Customer[] }>({
-    queryKey: ["customers"],
-    queryFn: async () => {
-      const response = await fetch("/api/customers");
-      if (!response.ok) {
-        return { data: [] };
-      }
-      return response.json();
-    },
-  });
+  const { data: customers = [] } = trpc.customers.list.useQuery();
 
-  const { data: fleetsData } = useQuery<{ data: Fleet[] }>({
-    queryKey: ["fleets"],
-    queryFn: async () => {
-      const response = await fetch("/api/fleets");
-      if (!response.ok) {
-        return { data: [] };
-      }
-      return response.json();
-    },
-  });
+  const { data: fleets = [] } = trpc.fleets.list.useQuery();
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await fetch(`/api/vehicles/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to delete vehicle");
-      }
-    },
+  const deleteMutation = trpc.vehicles.delete.useMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vehicles"] });
+      utils.vehicles.list.invalidate();
       toast.success("Vehicle deleted successfully");
       setDeleteDialogOpen(false);
       setVehicleToDelete(null);
     },
     onError: (error) => {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to delete vehicle"
-      );
+      toast.error(error.message || "Failed to delete vehicle");
     },
   });
 
@@ -144,11 +95,6 @@ export function VehiclesTable() {
     setIsFormOpen(true);
   }
 
-  const customers = useMemo(
-    () => customersData?.data || [],
-    [customersData?.data]
-  );
-  const fleets = useMemo(() => fleetsData?.data || [], [fleetsData?.data]);
 
   const columns = useMemo<ColumnDef<Vehicle>[]>(() => {
     const getCustomerName = (customerId: string | null | undefined) => {
@@ -244,7 +190,7 @@ export function VehiclesTable() {
   }, [customers, fleets]);
 
   const table = useReactTable({
-    data: vehicles?.data || [],
+    data: vehicles,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -265,11 +211,7 @@ export function VehiclesTable() {
     fleetFilter !== "__all__" ||
     sorting.length > 0;
 
-  if (isLoading) {
-    return <div className="p-4">Loading vehicles...</div>;
-  }
-
-  const vehicleList = vehicles?.data || [];
+  const vehicleList = vehicles;
 
   return (
     <div className="space-y-4">
@@ -361,83 +303,106 @@ export function VehiclesTable() {
         }
       />
 
-      {vehicleList.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          {hasActiveFilters
-            ? "No vehicles match the current filters."
-            : "No vehicles found. Create your first vehicle to get started."}
-        </div>
-      ) : (
-        <div className="border rounded-lg">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
-                    const canSort = header.column.getCanSort();
-                    return (
-                      <TableHead key={header.id}>
-                        {canSort ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 -ml-2"
-                            onClick={header.column.getToggleSortingHandler()}
-                          >
-                            {flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                            {{
-                              asc: <ArrowUp className="w-4 h-4 ml-1" />,
-                              desc: <ArrowDown className="w-4 h-4 ml-1" />,
-                            }[header.column.getIsSorted() as string] ?? (
-                              <ArrowUpDown className="w-4 h-4 ml-1" />
-                            )}
-                          </Button>
-                        ) : (
-                          flexRender(
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => {
+                  const canSort = header.column.getCanSort();
+                  return (
+                    <TableHead key={header.id}>
+                      {canSort ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 -ml-2"
+                          onClick={header.column.getToggleSortingHandler()}
+                        >
+                          {flexRender(
                             header.column.columnDef.header,
                             header.getContext()
-                          )
-                        )}
-                      </TableHead>
-                    );
-                  })}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && "selected"}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
-                    No results.
+                          )}
+                          {{
+                            asc: <ArrowUp className="w-4 h-4 ml-1" />,
+                            desc: <ArrowDown className="w-4 h-4 ml-1" />,
+                          }[header.column.getIsSorted() as string] ?? (
+                            <ArrowUpDown className="w-4 h-4 ml-1" />
+                          )}
+                        </Button>
+                      ) : (
+                        flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )
+                      )}
+                    </TableHead>
+                  );
+                })}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              Array.from({ length: 6 }).map((_, index) => (
+                <TableRow key={index}>
+                  <TableCell>
+                    <Skeleton className="h-5 w-24" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-32" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-16" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-32" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-32" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-32" />
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex justify-end gap-2">
+                      <Skeleton className="h-8 w-8" />
+                      <Skeleton className="h-8 w-8" />
+                    </div>
                   </TableCell>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+              ))
+            ) : vehicleList.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
+                  {hasActiveFilters
+                    ? "No vehicles match the current filters."
+                    : "No vehicles found. Create your first vehicle to get started."}
+                </TableCell>
+              </TableRow>
+            ) : (
+              table.getRowModel().rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && "selected"}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
@@ -453,7 +418,7 @@ export function VehiclesTable() {
             <AlertDialogAction
               onClick={() => {
                 if (vehicleToDelete) {
-                  deleteMutation.mutate(vehicleToDelete.id);
+                  deleteMutation.mutate({ id: vehicleToDelete.id });
                 }
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"

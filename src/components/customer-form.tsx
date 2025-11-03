@@ -16,11 +16,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { customerFormSchema, type CustomerFormInput } from "@/lib/db/schemas";
+import { trpc } from "@/lib/trpc";
 
 interface CustomerFormProps {
   open: boolean;
@@ -33,65 +33,29 @@ export function CustomerForm({
   onOpenChange,
   initialData,
 }: CustomerFormProps) {
-  const queryClient = useQueryClient();
   const isEditing = !!initialData?.id;
+  const utils = trpc.useUtils();
 
-  const createMutation = useMutation({
-    mutationFn: async (values: CustomerFormInput) => {
-      const response = await fetch("/api/customers", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(values),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to create customer");
-      }
-
-      return response.json();
-    },
+  const createMutation = trpc.customers.create.useMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      utils.customers.list.invalidate();
       toast.success("Customer created successfully");
       onOpenChange(false);
       form.reset();
     },
     onError: (error) => {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to create customer"
-      );
+      toast.error(error.message || "Failed to create customer");
     },
   });
 
-  const updateMutation = useMutation({
-    mutationFn: async (values: CustomerFormInput) => {
-      const response = await fetch(`/api/customers/${initialData?.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(values),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to update customer");
-      }
-
-      return response.json();
-    },
+  const updateMutation = trpc.customers.update.useMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      utils.customers.list.invalidate();
       toast.success("Customer updated successfully");
       onOpenChange(false);
     },
     onError: (error) => {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to update customer"
-      );
+      toast.error(error.message || "Failed to update customer");
     },
   });
 
@@ -125,7 +89,7 @@ export function CustomerForm({
 
   function onSubmit(values: CustomerFormInput) {
     if (isEditing) {
-      updateMutation.mutate(values);
+      updateMutation.mutate({ id: initialData!.id!, data: values });
     } else {
       createMutation.mutate(values);
     }
@@ -234,4 +198,5 @@ export function CustomerForm({
     </Dialog>
   );
 }
+
 

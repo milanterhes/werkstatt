@@ -26,10 +26,10 @@ import { Textarea } from "@/components/ui/textarea";
 import type { Customer } from "@/lib/db/schemas";
 import { fleetFormSchema, type FleetFormInput } from "@/lib/db/schemas";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
 
 interface FleetFormProps {
   open: boolean;
@@ -38,76 +38,31 @@ interface FleetFormProps {
 }
 
 export function FleetForm({ open, onOpenChange, initialData }: FleetFormProps) {
-  const queryClient = useQueryClient();
   const isEditing = !!initialData?.id;
+  const utils = trpc.useUtils();
 
-  const { data: customersData } = useQuery<{ data: Customer[] }>({
-    queryKey: ["customers"],
-    queryFn: async () => {
-      const response = await fetch("/api/customers");
-      if (!response.ok) {
-        return { data: [] };
-      }
-      return response.json();
-    },
-  });
+  const { data: customers = [] } = trpc.customers.list.useQuery();
 
-  const createMutation = useMutation({
-    mutationFn: async (values: FleetFormInput) => {
-      const response = await fetch("/api/fleets", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(values),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to create fleet");
-      }
-
-      return response.json();
-    },
+  const createMutation = trpc.fleets.create.useMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["fleets"] });
+      utils.fleets.list.invalidate();
       toast.success("Fleet created successfully");
       onOpenChange(false);
       form.reset();
     },
     onError: (error) => {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to create fleet"
-      );
+      toast.error(error.message || "Failed to create fleet");
     },
   });
 
-  const updateMutation = useMutation({
-    mutationFn: async (values: FleetFormInput) => {
-      const response = await fetch(`/api/fleets/${initialData?.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(values),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to update fleet");
-      }
-
-      return response.json();
-    },
+  const updateMutation = trpc.fleets.update.useMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["fleets"] });
+      utils.fleets.list.invalidate();
       toast.success("Fleet updated successfully");
       onOpenChange(false);
     },
     onError: (error) => {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to update fleet"
-      );
+      toast.error(error.message || "Failed to update fleet");
     },
   });
 
@@ -138,13 +93,12 @@ export function FleetForm({ open, onOpenChange, initialData }: FleetFormProps) {
 
   function onSubmit(values: FleetFormInput) {
     if (isEditing) {
-      updateMutation.mutate(values);
+      updateMutation.mutate({ id: initialData!.id!, data: values });
     } else {
       createMutation.mutate(values);
     }
   }
 
-  const customers = customersData?.data || [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -247,3 +201,4 @@ export function FleetForm({ open, onOpenChange, initialData }: FleetFormProps) {
     </Dialog>
   );
 }
+

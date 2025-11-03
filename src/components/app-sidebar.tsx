@@ -1,15 +1,5 @@
 "use client";
 
-import { authClient } from "@/lib/auth-client";
-import {
-  Home,
-  Settings,
-  Truck,
-  Users,
-  Warehouse,
-} from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
   Sidebar,
   SidebarContent,
@@ -22,6 +12,11 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { Skeleton } from "@/components/ui/skeleton";
+import { authClient } from "@/lib/auth-client";
+import { Home, Settings, Truck, Users, Warehouse } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 // Menu items
 const mainItems = [
@@ -65,11 +60,13 @@ export function AppSidebar() {
       <SidebarHeader>
         <div className="px-4 py-2">
           <h2 className="text-lg font-semibold">Werkstatt</h2>
-          {activeOrganization.data?.name && (
+          {activeOrganization.isPending ? (
+            <Skeleton className="h-4 w-32 mt-1" />
+          ) : activeOrganization.data?.name ? (
             <p className="text-sm text-muted-foreground">
               {activeOrganization.data.name}
             </p>
-          )}
+          ) : null}
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -126,4 +123,3 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
-

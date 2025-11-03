@@ -19,9 +19,9 @@ import {
   workshopDetailsFormSchema,
   type WorkshopDetailsFormInput,
 } from "@/lib/db/schemas";
+import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -37,36 +37,16 @@ export function WorkshopDetailsForm({
   onSuccess,
   ...props
 }: WorkshopDetailsFormProps) {
-  const queryClient = useQueryClient();
+  const utils = trpc.useUtils();
 
-  const updateMutation = useMutation({
-    mutationFn: async (values: WorkshopDetailsFormInput) => {
-      const response = await fetch("/api/workshop-details", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(values),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to save workshop details");
-      }
-
-      return response.json();
-    },
+  const updateMutation = trpc.workshop.updateDetails.useMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["workshop-details"] });
+      utils.workshop.getDetails.invalidate();
       toast.success("Workshop details saved successfully");
       onSuccess?.();
     },
     onError: (error) => {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to save workshop details"
-      );
+      toast.error(error.message || "Failed to save workshop details");
     },
   });
 

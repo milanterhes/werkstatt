@@ -10,6 +10,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -19,7 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { Customer, Fleet } from "@/lib/db/schemas";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { trpc } from "@/lib/trpc";
 import {
   flexRender,
   getCoreRowModel,
@@ -46,51 +47,21 @@ export function FleetsTable() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [fleetToDelete, setFleetToDelete] = useState<Fleet | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
-  const queryClient = useQueryClient();
+  const utils = trpc.useUtils();
 
-  const { data: fleets, isLoading } = useQuery<{ data: Fleet[] }>({
-    queryKey: ["fleets"],
-    queryFn: async () => {
-      const response = await fetch("/api/fleets");
-      if (!response.ok) {
-        throw new Error("Failed to fetch fleets");
-      }
-      return response.json();
-    },
-  });
+  const { data: fleets = [], isLoading } = trpc.fleets.list.useQuery();
 
-  const { data: customersData } = useQuery<{ data: Customer[] }>({
-    queryKey: ["customers"],
-    queryFn: async () => {
-      const response = await fetch("/api/customers");
-      if (!response.ok) {
-        return { data: [] };
-      }
-      return response.json();
-    },
-  });
+  const { data: customers = [] } = trpc.customers.list.useQuery();
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await fetch(`/api/fleets/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to delete fleet");
-      }
-    },
+  const deleteMutation = trpc.fleets.delete.useMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["fleets"] });
+      utils.fleets.list.invalidate();
       toast.success("Fleet deleted successfully");
       setDeleteDialogOpen(false);
       setFleetToDelete(null);
     },
     onError: (error) => {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to delete fleet"
-      );
+      toast.error(error.message || "Failed to delete fleet");
     },
   });
 
@@ -109,10 +80,6 @@ export function FleetsTable() {
     setIsFormOpen(true);
   }
 
-  const customers = useMemo(
-    () => customersData?.data || [],
-    [customersData?.data]
-  );
 
   const columns = useMemo<ColumnDef<Fleet>[]>(() => {
     const getCustomerName = (customerId: string | null | undefined) => {
@@ -181,7 +148,7 @@ export function FleetsTable() {
   }, [customers]);
 
   const table = useReactTable({
-    data: fleets?.data || [],
+    data: fleets,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -191,11 +158,7 @@ export function FleetsTable() {
     },
   });
 
-  if (isLoading) {
-    return <div className="p-4">Loading fleets...</div>;
-  }
-
-  const fleetList = fleets?.data || [];
+  const fleetList = fleets;
 
   return (
     <div className="space-y-4">
@@ -213,81 +176,98 @@ export function FleetsTable() {
         initialData={selectedFleet}
       />
 
-      {fleetList.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          No fleets found. Create your first fleet to get started.
-        </div>
-      ) : (
-        <div className="border rounded-lg">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
-                    const canSort = header.column.getCanSort();
-                    return (
-                      <TableHead key={header.id}>
-                        {canSort ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 -ml-2"
-                            onClick={header.column.getToggleSortingHandler()}
-                          >
-                            {flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                            {{
-                              asc: <ArrowUp className="w-4 h-4 ml-1" />,
-                              desc: <ArrowDown className="w-4 h-4 ml-1" />,
-                            }[header.column.getIsSorted() as string] ?? (
-                              <ArrowUpDown className="w-4 h-4 ml-1" />
-                            )}
-                          </Button>
-                        ) : (
-                          flexRender(
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => {
+                  const canSort = header.column.getCanSort();
+                  return (
+                    <TableHead key={header.id}>
+                      {canSort ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 -ml-2"
+                          onClick={header.column.getToggleSortingHandler()}
+                        >
+                          {flexRender(
                             header.column.columnDef.header,
                             header.getContext()
-                          )
-                        )}
-                      </TableHead>
-                    );
-                  })}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && "selected"}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
-                    No results.
+                          )}
+                          {{
+                            asc: <ArrowUp className="w-4 h-4 ml-1" />,
+                            desc: <ArrowDown className="w-4 h-4 ml-1" />,
+                          }[header.column.getIsSorted() as string] ?? (
+                            <ArrowUpDown className="w-4 h-4 ml-1" />
+                          )}
+                        </Button>
+                      ) : (
+                        flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )
+                      )}
+                    </TableHead>
+                  );
+                })}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              Array.from({ length: 6 }).map((_, index) => (
+                <TableRow key={index}>
+                  <TableCell>
+                    <Skeleton className="h-5 w-32" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-32" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-48" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-40" />
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex justify-end gap-2">
+                      <Skeleton className="h-8 w-8" />
+                      <Skeleton className="h-8 w-8" />
+                    </div>
                   </TableCell>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+              ))
+            ) : fleetList.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
+                  No fleets found. Create your first fleet to get started.
+                </TableCell>
+              </TableRow>
+            ) : (
+              table.getRowModel().rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && "selected"}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
@@ -303,7 +283,7 @@ export function FleetsTable() {
             <AlertDialogAction
               onClick={() => {
                 if (fleetToDelete) {
-                  deleteMutation.mutate(fleetToDelete.id);
+                  deleteMutation.mutate({ id: fleetToDelete.id });
                 }
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"

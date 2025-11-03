@@ -23,12 +23,11 @@ import {
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import * as React from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { vehicleFormSchema, type VehicleFormInput } from "@/lib/db/schemas";
-import type { Customer, Fleet } from "@/lib/db/schemas";
+import { trpc } from "@/lib/trpc";
 
 interface VehicleFormProps {
   open: boolean;
@@ -41,87 +40,33 @@ export function VehicleForm({
   onOpenChange,
   initialData,
 }: VehicleFormProps) {
-  const queryClient = useQueryClient();
   const isEditing = !!initialData?.id;
+  const utils = trpc.useUtils();
 
-  const { data: customersData } = useQuery<{ data: Customer[] }>({
-    queryKey: ["customers"],
-    queryFn: async () => {
-      const response = await fetch("/api/customers");
-      if (!response.ok) {
-        return { data: [] };
-      }
-      return response.json();
-    },
-  });
+  const { data: customers = [] } = trpc.customers.list.useQuery();
 
-  const { data: fleetsData } = useQuery<{ data: Fleet[] }>({
-    queryKey: ["fleets"],
-    queryFn: async () => {
-      const response = await fetch("/api/fleets");
-      if (!response.ok) {
-        return { data: [] };
-      }
-      return response.json();
-    },
-  });
+  const { data: fleets = [] } = trpc.fleets.list.useQuery();
 
-  const createMutation = useMutation({
-    mutationFn: async (values: VehicleFormInput) => {
-      const response = await fetch("/api/vehicles", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(values),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to create vehicle");
-      }
-
-      return response.json();
-    },
+  const createMutation = trpc.vehicles.create.useMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vehicles"] });
+      utils.vehicles.list.invalidate();
       toast.success("Vehicle created successfully");
       onOpenChange(false);
       form.reset();
     },
     onError: (error) => {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to create vehicle"
-      );
+      toast.error(error.message || "Failed to create vehicle");
     },
   });
 
-  const updateMutation = useMutation({
-    mutationFn: async (values: VehicleFormInput) => {
-      const response = await fetch(`/api/vehicles/${initialData?.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(values),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to update vehicle");
-      }
-
-      return response.json();
-    },
+  const updateMutation = trpc.vehicles.update.useMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vehicles"] });
+      utils.vehicles.list.invalidate();
       toast.success("Vehicle updated successfully");
       onOpenChange(false);
     },
     onError: (error) => {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to update vehicle"
-      );
+      toast.error(error.message || "Failed to update vehicle");
     },
   });
 
@@ -180,14 +125,12 @@ export function VehicleForm({
     };
 
     if (isEditing) {
-      updateMutation.mutate(submitData);
+      updateMutation.mutate({ id: initialData!.id!, data: submitData });
     } else {
       createMutation.mutate(submitData);
     }
   }
 
-  const customers = customersData?.data || [];
-  const fleets = fleetsData?.data || [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -376,4 +319,5 @@ export function VehicleForm({
     </Dialog>
   );
 }
+
 
