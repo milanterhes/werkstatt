@@ -1,9 +1,9 @@
-import Home from "@/components/home";
+import Settings from "@/components/settings";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-export default async function HomePage() {
+export default async function SettingsPage() {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -12,5 +12,6 @@ export default async function HomePage() {
     redirect("/sign-in?tab=signin");
   }
 
-  return <Home />;
+  return <Settings />;
 }
+

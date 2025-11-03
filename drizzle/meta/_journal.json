@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1762173646928,
+      "tag": "0000_polite_mercury",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1762173902807,
+      "tag": "0001_magenta_nightshade",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1762183498948,
+      "tag": "0002_milky_vivisector",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1762187186571,
+      "tag": "0003_rename_legal_form_to_company_name",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1762188000000,
+      "tag": "0004_add_customers_vehicles_fleets",
+      "breakpoints": true
+    }
+  ]
+}
