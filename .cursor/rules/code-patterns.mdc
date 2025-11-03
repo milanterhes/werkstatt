@@ -1,0 +1,56 @@
+---
+description: Code patterns, conventions, and best practices for Werkstatt Next
+alwaysApply: true
+---
+
+# Code Patterns and Conventions
+
+## Error Handling
+
+Always use Neverthrow Result types in service layer:
+
+```typescript
+import { Result, ok, err } from "neverthrow";
+
+export async function getCustomers(
+  organizationId: string
+): Promise<Result<Customer[], Error>> {
+  try {
+    const result = await db.select()...;
+    return ok(result);
+  } catch (error) {
+    return err(error instanceof Error ? error : new Error("Failed to fetch"));
+  }
+}
+```
+
+## Important Notes
+
+- Always use `protectedProcedure` for authenticated endpoints
+- Always filter by `organizationId` in database queries
+- Use `nanoid()` for ID generation (not UUID)
+- Convert empty strings to `null` for optional fields
+- Use Result types in services, convert to tRPC errors in routers
+- Forms should use React Hook Form with Zod validation
+- Tables should use TanStack Table with tRPC data
+
+## When Adding Features
+
+1. Start with database schema
+2. Generate Zod schemas (automatic)
+3. Create service functions
+4. Create tRPC router
+5. Create React components
+6. Add to navigation if needed
+
+### Creating a New Entity
+
+1. Define Drizzle schema in `src/lib/db/*-schema.ts`
+2. Add to `src/lib/db/index.ts` exports
+3. Generate Zod schemas (already automated via drizzle-zod)
+4. Create service in `src/lib/services/*-service.ts`
+5. Create router in `src/server/routers/*.ts`
+6. Add to main router in `src/server/trpc/router.ts`
+7. Create form component in `src/components/*-form.tsx`
+8. Create table component in `src/components/*-table.tsx`
+9. Create page in `src/app/*/page.tsx`

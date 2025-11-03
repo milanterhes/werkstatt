@@ -1,0 +1,58 @@
+---
+description: Frontend component patterns and conventions
+globs:
+  - "**/components/**/*.tsx"
+  - "**/app/**/*.tsx"
+---
+
+# Frontend Component Patterns
+
+## Components
+
+- Feature components in `src/components/`
+- UI components in `src/components/ui/` (shadcn/ui)
+- Forms use React Hook Form with Zod resolver
+- Tables use TanStack Table
+- Use tRPC hooks for data fetching
+
+## Form Component Pattern
+
+```typescript
+"use client";
+
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { trpc } from "@/lib/trpc";
+import { customerFormSchema } from "@/lib/db/schemas";
+import type { CustomerFormInput } from "@/lib/db/schemas";
+
+export function CustomerForm() {
+  const form = useForm<CustomerFormInput>({
+    resolver: zodResolver(customerFormSchema),
+  });
+  
+  const mutation = trpc.customers.create.useMutation();
+  
+  // ... form implementation
+}
+```
+
+## Table Component Pattern
+
+```typescript
+"use client";
+
+import { useReactTable } from "@tanstack/react-table";
+import { trpc } from "@/lib/trpc";
+
+export function CustomersTable() {
+  const { data, isLoading } = trpc.customers.list.useQuery();
+  
+  const table = useReactTable({
+    data: data ?? [],
+    // ... table configuration
+  });
+  
+  // ... table rendering
+}
+```

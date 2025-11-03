@@ -1,0 +1,76 @@
+---
+description: Project overview and context for Werkstatt Next workshop management system
+alwaysApply: true
+---
+
+# Werkstatt Next - Project Overview
+
+Werkstatt Next is a comprehensive multi-tenant workshop management system built with Next.js 16, TypeScript, tRPC, Better Auth, and Drizzle ORM. The application manages the complete lifecycle of a car mechanic shop, including:
+
+- Customer and vehicle management
+- Fleet management
+- Work order tracking and management (planned)
+- Invoicing and payment processing (planned)
+- Service interval tracking and reminders (planned)
+- Parts inventory (planned)
+- Appointments and scheduling (planned)
+- Reporting and analytics (planned)
+
+The system is designed to streamline operations for automotive repair shops of all sizes, covering the full workflow from customer intake through service completion and invoicing.
+
+## Tech Stack
+
+- **Framework**: Next.js 16 (App Router)
+- **Language**: TypeScript (strict mode)
+- **Database**: PostgreSQL with Drizzle ORM
+- **API**: tRPC for type-safe APIs
+- **Auth**: Better Auth with organization plugin
+- **UI**: React 19, Radix UI, Tailwind CSS 4, shadcn/ui
+- **State**: TanStack Query, React Hook Form
+- **Validation**: Zod
+- **Error Handling**: Neverthrow (Result types)
+
+## File Organization
+
+```
+src/
+├── app/              # Next.js pages (App Router)
+├── components/       # React components
+├── lib/              # Shared utilities
+│   ├── db/          # Database schemas
+│   ├── services/    # Business logic
+│   └── *.ts         # Utilities
+└── server/           # Server-side code
+    └── routers/     # tRPC routers
+```
+
+## Naming Conventions
+
+- **Files**: kebab-case for pages, PascalCase for components, camelCase for utilities
+- **Functions**: camelCase
+- **Types**: PascalCase
+- **Constants**: UPPER_SNAKE_CASE
+- **Database tables**: plural snake_case (e.g., `customers`, `vehicles`)
+- **Database columns**: snake_case
+
+## Multi-tenancy
+
+- All data is scoped to `organizationId`
+- Context always provides `activeOrganizationId`
+- All queries filter by `organizationId`
+- Foreign keys cascade delete on organization removal
+
+## Type Safety
+
+- Use Drizzle inferred types: `typeof customers.$inferSelect`
+- Use Zod inferred types: `z.infer<typeof customerFormSchema>`
+- Prefer type inference over explicit types
+- Export types from schema files
+
+## Dependencies
+
+- Neverthrow for functional error handling
+- drizzle-zod for schema generation
+- superjson for Date/Map/Set serialization
+- Better Auth for authentication
+- tRPC for type-safe APIs

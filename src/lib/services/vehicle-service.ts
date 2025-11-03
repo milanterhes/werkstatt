@@ -7,11 +7,33 @@ import { Result, err, ok } from "neverthrow";
 
 export type { VehicleInput };
 
+/**
+ * Filters for vehicle queries.
+ */
 export interface VehicleFilters {
   customerId?: string;
   fleetId?: string;
 }
 
+/**
+ * Retrieves all vehicles for a given organization, optionally filtered.
+ * 
+ * @param organizationId - The ID of the organization to fetch vehicles for
+ * @param filters - Optional filters to narrow down results (by customer or fleet)
+ * @returns A Result containing an array of vehicles or an error
+ * 
+ * @example
+ * ```typescript
+ * // Get all vehicles for an organization
+ * const result = await getVehicles(orgId);
+ * 
+ * // Get vehicles for a specific customer
+ * const result = await getVehicles(orgId, { customerId: "customer-123" });
+ * 
+ * // Get vehicles for a specific fleet
+ * const result = await getVehicles(orgId, { fleetId: "fleet-456" });
+ * ```
+ */
 export async function getVehicles(
   organizationId: string,
   filters?: VehicleFilters
@@ -40,6 +62,13 @@ export async function getVehicles(
   }
 }
 
+/**
+ * Retrieves a single vehicle by ID.
+ * 
+ * @param id - The vehicle ID to fetch
+ * @param organizationId - The ID of the organization (for security/tenant isolation)
+ * @returns A Result containing the vehicle or an error if not found
+ */
 export async function getVehicleById(
   id: string,
   organizationId: string
@@ -65,6 +94,18 @@ export async function getVehicleById(
   }
 }
 
+/**
+ * Creates a new vehicle.
+ * 
+ * @param data - Vehicle data (excluding auto-generated fields)
+ * @param organizationId - The ID of the organization to create the vehicle for
+ * @returns A Result containing the created vehicle or an error
+ * 
+ * @remarks
+ * - Automatically generates a new ID using nanoid()
+ * - Converts empty strings to null for optional fields
+ * - Sets timestamps automatically
+ */
 export async function createVehicle(
   data: Omit<VehicleInput, "id" | "organizationId" | "createdAt" | "updatedAt">,
   organizationId: string
@@ -95,6 +136,14 @@ export async function createVehicle(
   }
 }
 
+/**
+ * Updates an existing vehicle.
+ * 
+ * @param id - The vehicle ID to update
+ * @param data - Partial vehicle data to update
+ * @param organizationId - The ID of the organization (for security/tenant isolation)
+ * @returns A Result containing the updated vehicle or an error if not found
+ */
 export async function updateVehicle(
   id: string,
   data: Partial<
@@ -134,6 +183,13 @@ export async function updateVehicle(
   }
 }
 
+/**
+ * Deletes a vehicle by ID.
+ * 
+ * @param id - The vehicle ID to delete
+ * @param organizationId - The ID of the organization (for security/tenant isolation)
+ * @returns A Result containing void on success or an error if not found
+ */
 export async function deleteVehicle(
   id: string,
   organizationId: string

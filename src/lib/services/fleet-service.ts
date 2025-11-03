@@ -7,6 +7,12 @@ import { Result, err, ok } from "neverthrow";
 
 export type { FleetInput };
 
+/**
+ * Retrieves all fleets for a given organization.
+ * 
+ * @param organizationId - The ID of the organization to fetch fleets for
+ * @returns A Result containing an array of fleets or an error
+ */
 export async function getFleets(
   organizationId: string
 ): Promise<Result<Fleet[], Error>> {
@@ -24,6 +30,13 @@ export async function getFleets(
   }
 }
 
+/**
+ * Retrieves a single fleet by ID.
+ * 
+ * @param id - The fleet ID to fetch
+ * @param organizationId - The ID of the organization (for security/tenant isolation)
+ * @returns A Result containing the fleet or an error if not found
+ */
 export async function getFleetById(
   id: string,
   organizationId: string
@@ -47,6 +60,13 @@ export async function getFleetById(
   }
 }
 
+/**
+ * Creates a new fleet.
+ * 
+ * @param data - Fleet data (excluding auto-generated fields)
+ * @param organizationId - The ID of the organization to create the fleet for
+ * @returns A Result containing the created fleet or an error
+ */
 export async function createFleet(
   data: Omit<FleetInput, "id" | "organizationId" | "createdAt" | "updatedAt">,
   organizationId: string
@@ -77,6 +97,14 @@ export async function createFleet(
   }
 }
 
+/**
+ * Updates an existing fleet.
+ * 
+ * @param id - The fleet ID to update
+ * @param data - Partial fleet data to update
+ * @param organizationId - The ID of the organization (for security/tenant isolation)
+ * @returns A Result containing the updated fleet or an error if not found
+ */
 export async function updateFleet(
   id: string,
   data: Partial<
@@ -114,6 +142,13 @@ export async function updateFleet(
   }
 }
 
+/**
+ * Deletes a fleet by ID.
+ * 
+ * @param id - The fleet ID to delete
+ * @param organizationId - The ID of the organization (for security/tenant isolation)
+ * @returns A Result containing void on success or an error if not found
+ */
 export async function deleteFleet(
   id: string,
   organizationId: string

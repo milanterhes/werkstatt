@@ -1,0 +1,46 @@
+---
+description: tRPC API router patterns and conventions
+globs:
+  - "**/server/routers/**/*.ts"
+  - "**/server/trpc/**/*.ts"
+---
+
+# API Layer Patterns
+
+## tRPC Routers
+
+- Routers in `src/server/routers/`
+- Use `protectedProcedure` for authenticated endpoints
+- Convert Result types to tRPC errors:
+
+```typescript
+return result.match(
+  (data) => data,
+  (error) => {
+    if (error.message.includes("not found")) {
+      throw new TRPCError({ code: "NOT_FOUND", message: error.message });
+    }
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: error.message,
+    });
+  }
+);
+```
+
+## Query Pattern
+
+```typescript
+const { data, isLoading, error } = trpc.customers.list.useQuery();
+```
+
+## Mutation Pattern
+
+```typescript
+const mutation = trpc.customers.create.useMutation({
+  onSuccess: () => {
+    utils.customers.list.invalidate();
+    toast.success("Customer created");
+  },
+});
+```

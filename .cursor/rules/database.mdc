@@ -1,0 +1,31 @@
+---
+description: Database schema patterns, conventions, and service layer guidelines
+globs:
+  - "**/lib/db/**/*.ts"
+  - "**/lib/services/**/*.ts"
+---
+
+# Database and Service Layer Patterns
+
+## Service Layer
+
+- Services are in `src/lib/services/`
+- All functions return `Result<T, Error>`
+- Always inject `organizationId` from context
+- Convert empty strings to `null` for optional fields
+- Use `nanoid()` for generating IDs
+
+## Database Schemas
+
+- Schemas in `src/lib/db/`
+- Use Drizzle ORM table definitions
+- Generate Zod schemas via `drizzle-zod` in `src/lib/db/schemas.ts`
+- Always include `organizationId` with cascade delete
+- Include `createdAt` and `updatedAt` timestamps
+
+## Form Schemas
+
+- Form schemas derived from insert schemas
+- Omit: `id`, `organizationId`, `createdAt`, `updatedAt`
+- Add custom validation (email, URL, etc.)
+- Handle date strings for date inputs
