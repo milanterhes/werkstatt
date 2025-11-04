@@ -3,9 +3,14 @@
  * This file centralizes all schema definitions for type safety and validation
  */
 
-import { createInsertSchema, createSelectSchema, createUpdateSchema } from "drizzle-zod";
+import {
+  createInsertSchema,
+  createSelectSchema,
+  createUpdateSchema,
+} from "drizzle-zod";
 import { z } from "zod";
 import { customers, fleets, vehicles } from "./customer-schema";
+import { workOrders } from "./work-order-schema";
 import { workshopDetails } from "./workshop-schema";
 
 // Customer schemas
@@ -109,5 +114,44 @@ export const workshopDetailsFormSchema = workshopDetailsInsertSchema
 export type WorkshopDetails = typeof workshopDetails.$inferSelect;
 export type WorkshopDetailsInput = typeof workshopDetails.$inferInsert;
 export type WorkshopDetailsUpdate = typeof workshopDetails.$inferInsert;
-export type WorkshopDetailsFormInput = z.infer<typeof workshopDetailsFormSchema>;
+export type WorkshopDetailsFormInput = z.infer<
+  typeof workshopDetailsFormSchema
+>;
 
+// Work Order schemas
+export const workOrderSelectSchema = createSelectSchema(workOrders);
+export const workOrderInsertSchema = createInsertSchema(workOrders);
+export const workOrderUpdateSchema = createUpdateSchema(workOrders);
+
+// Part schema for validation
+const partSchema = z.object({
+  partNumber: z.string().min(1, "Part number is required"),
+  buyPrice: z.number().min(0, "Buy price must be positive"),
+  customerPrice: z.number().min(0, "Customer price must be positive"),
+});
+
+// Work Order form schema (excludes generated fields, handles date strings and parts validation)
+export const workOrderFormSchema = workOrderInsertSchema
+  .omit({
+    id: true,
+    organizationId: true,
+    createdAt: true,
+    updatedAt: true,
+    status: true, // Omit and redefine with enum
+  })
+  .extend({
+    status: z
+      .enum(["draft", "in-progress", "completed", "cancelled"])
+      .default("draft"),
+    createdDate: z.string().optional().nullable(), // Accept string for date input
+    dueDate: z.string().optional().nullable(), // Accept string for date input
+    completedDate: z.string().optional().nullable(), // Accept string for date input
+    laborCosts: z.number().optional().nullable(),
+    laborHours: z.number().optional().nullable(),
+    parts: z.array(partSchema).default([]),
+  });
+
+export type WorkOrder = typeof workOrders.$inferSelect;
+export type WorkOrderInput = typeof workOrders.$inferInsert;
+export type WorkOrderUpdate = typeof workOrders.$inferInsert;
+export type WorkOrderFormInput = z.infer<typeof workOrderFormSchema>;

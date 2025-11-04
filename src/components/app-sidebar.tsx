@@ -14,7 +14,14 @@ import {
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { authClient } from "@/lib/auth-client";
-import { Home, Settings, Truck, Users, Warehouse } from "lucide-react";
+import {
+  ClipboardList,
+  Home,
+  Settings,
+  Truck,
+  Users,
+  Warehouse,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -39,6 +46,11 @@ const mainItems = [
     title: "Fleets",
     url: "/fleets",
     icon: Warehouse,
+  },
+  {
+    title: "Work Orders",
+    url: "/work-orders",
+    icon: ClipboardList,
   },
 ];
 

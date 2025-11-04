@@ -36,6 +36,13 @@
       "when": 1762188000000,
       "tag": "0004_add_customers_vehicles_fleets",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1762254770274,
+      "tag": "0005_sudden_zuras",
+      "breakpoints": true
     }
   ]
 }
