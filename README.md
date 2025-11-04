@@ -204,6 +204,10 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for API structure details.
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - Technical architecture and design decisions
 - [CODEBASE.md](./CODEBASE.md) - Directory structure and conventions
 
+## Otel
+
+- Guide to setup local Otel server [here](https://nextjs.org/docs/app/guides/open-telemetry#testing-your-instrumentation)
+
 ## License
 
 Private project

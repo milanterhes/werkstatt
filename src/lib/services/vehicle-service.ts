@@ -2,7 +2,9 @@ import db from "@/lib/db";
 import { vehicles } from "@/lib/db/customer-schema";
 import type { Vehicle, VehicleInput } from "@/lib/db/schemas";
 import { BaseError, DatabaseError, NotFoundError } from "@/lib/errors";
+import { serviceTracer } from "@/lib/tracer";
 import { Result } from "@praha/byethrow";
+import { SpanStatusCode } from "@opentelemetry/api";
 import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
@@ -39,34 +41,56 @@ export async function getVehicles(
   organizationId: string,
   filters?: VehicleFilters
 ): Promise<Result.Result<Vehicle[], BaseError>> {
-  try {
-    const conditions = [eq(vehicles.organizationId, organizationId)];
+  return await serviceTracer.startActiveSpan(
+    "vehicle.getVehicles",
+    {
+      attributes: {
+        "service.name": "vehicle",
+        "service.operation": "get",
+        "organization.id": organizationId,
+        ...(filters?.customerId && { "filter.customerId": filters.customerId }),
+        ...(filters?.fleetId && { "filter.fleetId": filters.fleetId }),
+      },
+    },
+    async (span) => {
+      try {
+        const conditions = [eq(vehicles.organizationId, organizationId)];
 
-    if (filters?.customerId) {
-      conditions.push(eq(vehicles.customerId, filters.customerId));
+        if (filters?.customerId) {
+          conditions.push(eq(vehicles.customerId, filters.customerId));
+        }
+
+        if (filters?.fleetId) {
+          conditions.push(eq(vehicles.fleetId, filters.fleetId));
+        }
+
+        const result = await db
+          .select()
+          .from(vehicles)
+          .where(and(...conditions));
+
+        span.setAttribute("result.count", result.length);
+        return Result.succeed(result);
+      } catch (error) {
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: "Failed to fetch vehicles",
+        });
+        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        return Result.fail(
+          new DatabaseError({
+            customMessage: "Failed to fetch vehicles",
+            code: "DATABASE_ERROR",
+            statusCode: 500,
+            metadata: { organizationId, filters },
+            cause: error instanceof Error ? error : undefined,
+          })
+        );
+      } finally {
+        span.end();
+      }
     }
-
-    if (filters?.fleetId) {
-      conditions.push(eq(vehicles.fleetId, filters.fleetId));
-    }
-
-    const result = await db
-      .select()
-      .from(vehicles)
-      .where(and(...conditions));
-
-    return Result.succeed(result);
-  } catch (error) {
-    return Result.fail(
-      new DatabaseError({
-        customMessage: "Failed to fetch vehicles",
-        code: "DATABASE_ERROR",
-        statusCode: 500,
-        metadata: { organizationId, filters },
-        cause: error instanceof Error ? error : undefined,
-      })
-    );
-  }
+  );
 }
 
 /**
@@ -80,38 +104,62 @@ export async function getVehicleById(
   id: string,
   organizationId: string
 ): Promise<Result.Result<Vehicle, BaseError>> {
-  try {
-    const result = await db
-      .select()
-      .from(vehicles)
-      .where(
-        and(eq(vehicles.id, id), eq(vehicles.organizationId, organizationId))
-      )
-      .limit(1);
+  return await serviceTracer.startActiveSpan(
+    "vehicle.getVehicleById",
+    {
+      attributes: {
+        "service.name": "vehicle",
+        "service.operation": "get",
+        "organization.id": organizationId,
+        "entity.id": id,
+      },
+    },
+    async (span) => {
+      try {
+        const result = await db
+          .select()
+          .from(vehicles)
+          .where(
+            and(eq(vehicles.id, id), eq(vehicles.organizationId, organizationId))
+          )
+          .limit(1);
 
-    if (result.length === 0) {
-      return Result.fail(
-        new NotFoundError({
-          customMessage: "Vehicle not found",
-          code: "NOT_FOUND",
-          statusCode: 404,
-          metadata: { id, organizationId },
-        })
-      );
+        if (result.length === 0) {
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: "Vehicle not found",
+          });
+          return Result.fail(
+            new NotFoundError({
+              customMessage: "Vehicle not found",
+              code: "NOT_FOUND",
+              statusCode: 404,
+              metadata: { id, organizationId },
+            })
+          );
+        }
+
+        return Result.succeed(result[0]);
+      } catch (error) {
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: "Failed to fetch vehicle",
+        });
+        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        return Result.fail(
+          new DatabaseError({
+            customMessage: "Failed to fetch vehicle",
+            code: "DATABASE_ERROR",
+            statusCode: 500,
+            metadata: { id, organizationId },
+            cause: error instanceof Error ? error : undefined,
+          })
+        );
+      } finally {
+        span.end();
+      }
     }
-
-    return Result.succeed(result[0]);
-  } catch (error) {
-    return Result.fail(
-      new DatabaseError({
-        customMessage: "Failed to fetch vehicle",
-        code: "DATABASE_ERROR",
-        statusCode: 500,
-        metadata: { id, organizationId },
-        cause: error instanceof Error ? error : undefined,
-      })
-    );
-  }
+  );
 }
 
 /**
@@ -130,36 +178,56 @@ export async function createVehicle(
   data: Omit<VehicleInput, "id" | "organizationId" | "createdAt" | "updatedAt">,
   organizationId: string
 ): Promise<Result.Result<Vehicle, BaseError>> {
-  try {
-    // Clean up empty strings to null for optional fields
-    const cleanedData = Object.fromEntries(
-      Object.entries(data).map(([key, value]) => [
-        key,
-        value === "" ? null : value,
-      ])
-    );
+  return await serviceTracer.startActiveSpan(
+    "vehicle.createVehicle",
+    {
+      attributes: {
+        "service.name": "vehicle",
+        "service.operation": "create",
+        "organization.id": organizationId,
+      },
+    },
+    async (span) => {
+      try {
+        // Clean up empty strings to null for optional fields
+        const cleanedData = Object.fromEntries(
+          Object.entries(data).map(([key, value]) => [
+            key,
+            value === "" ? null : value,
+          ])
+        );
 
-    const result = await db
-      .insert(vehicles)
-      .values({
-        id: nanoid(),
-        organizationId,
-        ...cleanedData,
-      } as VehicleInput)
-      .returning();
+        const result = await db
+          .insert(vehicles)
+          .values({
+            id: nanoid(),
+            organizationId,
+            ...cleanedData,
+          } as VehicleInput)
+          .returning();
 
-    return Result.succeed(result[0]);
-  } catch (error) {
-    return Result.fail(
-      new DatabaseError({
-        customMessage: "Failed to create vehicle",
-        code: "DATABASE_ERROR",
-        statusCode: 500,
-        metadata: { organizationId },
-        cause: error instanceof Error ? error : undefined,
-      })
-    );
-  }
+        span.setAttribute("entity.id", result[0].id);
+        return Result.succeed(result[0]);
+      } catch (error) {
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: "Failed to create vehicle",
+        });
+        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        return Result.fail(
+          new DatabaseError({
+            customMessage: "Failed to create vehicle",
+            code: "DATABASE_ERROR",
+            statusCode: 500,
+            metadata: { organizationId },
+            cause: error instanceof Error ? error : undefined,
+          })
+        );
+      } finally {
+        span.end();
+      }
+    }
+  );
 }
 
 /**
@@ -177,49 +245,73 @@ export async function updateVehicle(
   >,
   organizationId: string
 ): Promise<Result.Result<Vehicle, BaseError>> {
-  try {
-    // Clean up empty strings to null for optional fields
-    const cleanedData = Object.fromEntries(
-      Object.entries(data).map(([key, value]) => [
-        key,
-        value === "" ? null : value,
-      ])
-    );
+  return await serviceTracer.startActiveSpan(
+    "vehicle.updateVehicle",
+    {
+      attributes: {
+        "service.name": "vehicle",
+        "service.operation": "update",
+        "organization.id": organizationId,
+        "entity.id": id,
+      },
+    },
+    async (span) => {
+      try {
+        // Clean up empty strings to null for optional fields
+        const cleanedData = Object.fromEntries(
+          Object.entries(data).map(([key, value]) => [
+            key,
+            value === "" ? null : value,
+          ])
+        );
 
-    const result = await db
-      .update(vehicles)
-      .set({
-        ...cleanedData,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(eq(vehicles.id, id), eq(vehicles.organizationId, organizationId))
-      )
-      .returning();
+        const result = await db
+          .update(vehicles)
+          .set({
+            ...cleanedData,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(eq(vehicles.id, id), eq(vehicles.organizationId, organizationId))
+          )
+          .returning();
 
-    if (result.length === 0) {
-      return Result.fail(
-        new NotFoundError({
-          customMessage: "Vehicle not found",
-          code: "NOT_FOUND",
-          statusCode: 404,
-          metadata: { id, organizationId },
-        })
-      );
+        if (result.length === 0) {
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: "Vehicle not found",
+          });
+          return Result.fail(
+            new NotFoundError({
+              customMessage: "Vehicle not found",
+              code: "NOT_FOUND",
+              statusCode: 404,
+              metadata: { id, organizationId },
+            })
+          );
+        }
+
+        return Result.succeed(result[0]);
+      } catch (error) {
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: "Failed to update vehicle",
+        });
+        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        return Result.fail(
+          new DatabaseError({
+            customMessage: "Failed to update vehicle",
+            code: "DATABASE_ERROR",
+            statusCode: 500,
+            metadata: { id, organizationId },
+            cause: error instanceof Error ? error : undefined,
+          })
+        );
+      } finally {
+        span.end();
+      }
     }
-
-    return Result.succeed(result[0]);
-  } catch (error) {
-    return Result.fail(
-      new DatabaseError({
-        customMessage: "Failed to update vehicle",
-        code: "DATABASE_ERROR",
-        statusCode: 500,
-        metadata: { id, organizationId },
-        cause: error instanceof Error ? error : undefined,
-      })
-    );
-  }
+  );
 }
 
 /**
@@ -233,35 +325,59 @@ export async function deleteVehicle(
   id: string,
   organizationId: string
 ): Promise<Result.Result<void, BaseError>> {
-  try {
-    const result = await db
-      .delete(vehicles)
-      .where(
-        and(eq(vehicles.id, id), eq(vehicles.organizationId, organizationId))
-      )
-      .returning();
+  return await serviceTracer.startActiveSpan(
+    "vehicle.deleteVehicle",
+    {
+      attributes: {
+        "service.name": "vehicle",
+        "service.operation": "delete",
+        "organization.id": organizationId,
+        "entity.id": id,
+      },
+    },
+    async (span) => {
+      try {
+        const result = await db
+          .delete(vehicles)
+          .where(
+            and(eq(vehicles.id, id), eq(vehicles.organizationId, organizationId))
+          )
+          .returning();
 
-    if (result.length === 0) {
-      return Result.fail(
-        new NotFoundError({
-          customMessage: "Vehicle not found",
-          code: "NOT_FOUND",
-          statusCode: 404,
-          metadata: { id, organizationId },
-        })
-      );
+        if (result.length === 0) {
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: "Vehicle not found",
+          });
+          return Result.fail(
+            new NotFoundError({
+              customMessage: "Vehicle not found",
+              code: "NOT_FOUND",
+              statusCode: 404,
+              metadata: { id, organizationId },
+            })
+          );
+        }
+
+        return Result.succeed(undefined);
+      } catch (error) {
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: "Failed to delete vehicle",
+        });
+        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        return Result.fail(
+          new DatabaseError({
+            customMessage: "Failed to delete vehicle",
+            code: "DATABASE_ERROR",
+            statusCode: 500,
+            metadata: { id, organizationId },
+            cause: error instanceof Error ? error : undefined,
+          })
+        );
+      } finally {
+        span.end();
+      }
     }
-
-    return Result.succeed(undefined);
-  } catch (error) {
-    return Result.fail(
-      new DatabaseError({
-        customMessage: "Failed to delete vehicle",
-        code: "DATABASE_ERROR",
-        statusCode: 500,
-        metadata: { id, organizationId },
-        cause: error instanceof Error ? error : undefined,
-      })
-    );
-  }
+  );
 }

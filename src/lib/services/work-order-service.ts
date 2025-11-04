@@ -9,6 +9,8 @@ import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { Result } from "@praha/byethrow";
 import { BaseError, DatabaseError, NotFoundError } from "@/lib/errors";
+import { serviceTracer } from "@/lib/tracer";
+import { SpanStatusCode } from "@opentelemetry/api";
 
 export type { WorkOrderInput };
 
@@ -21,23 +23,43 @@ export type { WorkOrderInput };
 export async function getWorkOrders(
   organizationId: string
 ): Promise<Result.Result<WorkOrder[], BaseError>> {
-  try {
-    const result = await db
-      .select()
-      .from(workOrders)
-      .where(eq(workOrders.organizationId, organizationId));
+  return await serviceTracer.startActiveSpan(
+    "workOrder.getWorkOrders",
+    {
+      attributes: {
+        "service.name": "workOrder",
+        "service.operation": "get",
+        "organization.id": organizationId,
+      },
+    },
+    async (span) => {
+      try {
+        const result = await db
+          .select()
+          .from(workOrders)
+          .where(eq(workOrders.organizationId, organizationId));
 
-    return Result.succeed(result);
-  } catch (error) {
-    return Result.fail(
-      new DatabaseError({
-        customMessage: "Failed to fetch work orders",
-        code: "DATABASE_ERROR",
-        statusCode: 500,
-        cause: error instanceof Error ? error : undefined,
-      })
-    );
-  }
+        span.setAttribute("result.count", result.length);
+        return Result.succeed(result);
+      } catch (error) {
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: "Failed to fetch work orders",
+        });
+        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        return Result.fail(
+          new DatabaseError({
+            customMessage: "Failed to fetch work orders",
+            code: "DATABASE_ERROR",
+            statusCode: 500,
+            cause: error instanceof Error ? error : undefined,
+          })
+        );
+      } finally {
+        span.end();
+      }
+    }
+  );
 }
 
 /**
@@ -51,41 +73,65 @@ export async function getWorkOrderById(
   id: string,
   organizationId: string
 ): Promise<Result.Result<WorkOrder, BaseError>> {
-  try {
-    const result = await db
-      .select()
-      .from(workOrders)
-      .where(
-        and(
-          eq(workOrders.id, id),
-          eq(workOrders.organizationId, organizationId)
-        )
-      )
-      .limit(1);
+  return await serviceTracer.startActiveSpan(
+    "workOrder.getWorkOrderById",
+    {
+      attributes: {
+        "service.name": "workOrder",
+        "service.operation": "get",
+        "organization.id": organizationId,
+        "entity.id": id,
+      },
+    },
+    async (span) => {
+      try {
+        const result = await db
+          .select()
+          .from(workOrders)
+          .where(
+            and(
+              eq(workOrders.id, id),
+              eq(workOrders.organizationId, organizationId)
+            )
+          )
+          .limit(1);
 
-    if (result.length === 0) {
-      return Result.fail(
-        new NotFoundError({
-          customMessage: "Work order not found",
-          code: "NOT_FOUND",
-          statusCode: 404,
-          metadata: { id, organizationId },
-        })
-      );
+        if (result.length === 0) {
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: "Work order not found",
+          });
+          return Result.fail(
+            new NotFoundError({
+              customMessage: "Work order not found",
+              code: "NOT_FOUND",
+              statusCode: 404,
+              metadata: { id, organizationId },
+            })
+          );
+        }
+
+        return Result.succeed(result[0]);
+      } catch (error) {
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: "Failed to fetch work order",
+        });
+        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        return Result.fail(
+          new DatabaseError({
+            customMessage: "Failed to fetch work order",
+            code: "DATABASE_ERROR",
+            statusCode: 500,
+            metadata: { id, organizationId },
+            cause: error instanceof Error ? error : undefined,
+          })
+        );
+      } finally {
+        span.end();
+      }
     }
-
-    return Result.succeed(result[0]);
-  } catch (error) {
-    return Result.fail(
-      new DatabaseError({
-        customMessage: "Failed to fetch work order",
-        code: "DATABASE_ERROR",
-        statusCode: 500,
-        metadata: { id, organizationId },
-        cause: error instanceof Error ? error : undefined,
-      })
-    );
-  }
+  );
 }
 
 /**
@@ -112,48 +158,68 @@ export async function createWorkOrder(
   },
   organizationId: string
 ): Promise<Result.Result<WorkOrder, BaseError>> {
-  try {
-    // Clean up empty strings to null for optional fields
-    const cleanedData = Object.fromEntries(
-      Object.entries(data).map(([key, value]) => {
-        if (value === "") {
-          return [key, null];
-        }
-        // Convert date strings to Date objects for timestamp fields
-        if (
-          (key === "createdDate" ||
-            key === "dueDate" ||
-            key === "completedDate") &&
-          typeof value === "string" &&
-          value !== ""
-        ) {
-          return [key, new Date(value)];
-        }
-        return [key, value];
-      })
-    );
+  return await serviceTracer.startActiveSpan(
+    "workOrder.createWorkOrder",
+    {
+      attributes: {
+        "service.name": "workOrder",
+        "service.operation": "create",
+        "organization.id": organizationId,
+      },
+    },
+    async (span) => {
+      try {
+        // Clean up empty strings to null for optional fields
+        const cleanedData = Object.fromEntries(
+          Object.entries(data).map(([key, value]) => {
+            if (value === "") {
+              return [key, null];
+            }
+            // Convert date strings to Date objects for timestamp fields
+            if (
+              (key === "createdDate" ||
+                key === "dueDate" ||
+                key === "completedDate") &&
+              typeof value === "string" &&
+              value !== ""
+            ) {
+              return [key, new Date(value)];
+            }
+            return [key, value];
+          })
+        );
 
-    const result = await db
-      .insert(workOrders)
-      .values({
-        id: nanoid(),
-        organizationId,
-        ...cleanedData,
-      } as WorkOrderInput)
-      .returning();
+        const result = await db
+          .insert(workOrders)
+          .values({
+            id: nanoid(),
+            organizationId,
+            ...cleanedData,
+          } as WorkOrderInput)
+          .returning();
 
-    return Result.succeed(result[0]);
-  } catch (error) {
-    return Result.fail(
-      new DatabaseError({
-        customMessage: "Failed to create work order",
-        code: "DATABASE_ERROR",
-        statusCode: 500,
-        metadata: { organizationId },
-        cause: error instanceof Error ? error : undefined,
-      })
-    );
-  }
+        span.setAttribute("entity.id", result[0].id);
+        return Result.succeed(result[0]);
+      } catch (error) {
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: "Failed to create work order",
+        });
+        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        return Result.fail(
+          new DatabaseError({
+            customMessage: "Failed to create work order",
+            code: "DATABASE_ERROR",
+            statusCode: 500,
+            metadata: { organizationId },
+            cause: error instanceof Error ? error : undefined,
+          })
+        );
+      } finally {
+        span.end();
+      }
+    }
+  );
 }
 
 /**
@@ -184,64 +250,88 @@ export async function updateWorkOrder(
   },
   organizationId: string
 ): Promise<Result.Result<WorkOrder, BaseError>> {
-  try {
-    // Clean up empty strings to null for optional fields
-    const cleanedData = Object.fromEntries(
-      Object.entries(data).map(([key, value]) => {
-        if (value === "") {
-          return [key, null];
-        }
-        // Convert date strings to Date objects for timestamp fields
-        if (
-          (key === "createdDate" ||
-            key === "dueDate" ||
-            key === "completedDate") &&
-          typeof value === "string" &&
-          value !== ""
-        ) {
-          return [key, new Date(value)];
-        }
-        return [key, value];
-      })
-    );
+  return await serviceTracer.startActiveSpan(
+    "workOrder.updateWorkOrder",
+    {
+      attributes: {
+        "service.name": "workOrder",
+        "service.operation": "update",
+        "organization.id": organizationId,
+        "entity.id": id,
+      },
+    },
+    async (span) => {
+      try {
+        // Clean up empty strings to null for optional fields
+        const cleanedData = Object.fromEntries(
+          Object.entries(data).map(([key, value]) => {
+            if (value === "") {
+              return [key, null];
+            }
+            // Convert date strings to Date objects for timestamp fields
+            if (
+              (key === "createdDate" ||
+                key === "dueDate" ||
+                key === "completedDate") &&
+              typeof value === "string" &&
+              value !== ""
+            ) {
+              return [key, new Date(value)];
+            }
+            return [key, value];
+          })
+        );
 
-    const result = await db
-      .update(workOrders)
-      .set({
-        ...cleanedData,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(workOrders.id, id),
-          eq(workOrders.organizationId, organizationId)
-        )
-      )
-      .returning();
+        const result = await db
+          .update(workOrders)
+          .set({
+            ...cleanedData,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(workOrders.id, id),
+              eq(workOrders.organizationId, organizationId)
+            )
+          )
+          .returning();
 
-    if (result.length === 0) {
-      return Result.fail(
-        new NotFoundError({
-          customMessage: "Work order not found",
-          code: "NOT_FOUND",
-          statusCode: 404,
-          metadata: { id, organizationId },
-        })
-      );
+        if (result.length === 0) {
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: "Work order not found",
+          });
+          return Result.fail(
+            new NotFoundError({
+              customMessage: "Work order not found",
+              code: "NOT_FOUND",
+              statusCode: 404,
+              metadata: { id, organizationId },
+            })
+          );
+        }
+
+        return Result.succeed(result[0]);
+      } catch (error) {
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: "Failed to update work order",
+        });
+        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        return Result.fail(
+          new DatabaseError({
+            customMessage: "Failed to update work order",
+            code: "DATABASE_ERROR",
+            statusCode: 500,
+            metadata: { id, organizationId },
+            cause: error instanceof Error ? error : undefined,
+          })
+        );
+      } finally {
+        span.end();
+      }
     }
-
-    return Result.succeed(result[0]);
-  } catch (error) {
-    return Result.fail(
-      new DatabaseError({
-        customMessage: "Failed to update work order",
-        code: "DATABASE_ERROR",
-        statusCode: 500,
-        metadata: { id, organizationId },
-        cause: error instanceof Error ? error : undefined,
-      })
-    );
-  }
+  );
 }
 
 /**
@@ -259,38 +349,62 @@ export async function deleteWorkOrder(
   id: string,
   organizationId: string
 ): Promise<Result.Result<void, BaseError>> {
-  try {
-    const result = await db
-      .delete(workOrders)
-      .where(
-        and(
-          eq(workOrders.id, id),
-          eq(workOrders.organizationId, organizationId)
-        )
-      )
-      .returning();
+  return await serviceTracer.startActiveSpan(
+    "workOrder.deleteWorkOrder",
+    {
+      attributes: {
+        "service.name": "workOrder",
+        "service.operation": "delete",
+        "organization.id": organizationId,
+        "entity.id": id,
+      },
+    },
+    async (span) => {
+      try {
+        const result = await db
+          .delete(workOrders)
+          .where(
+            and(
+              eq(workOrders.id, id),
+              eq(workOrders.organizationId, organizationId)
+            )
+          )
+          .returning();
 
-    if (result.length === 0) {
-      return Result.fail(
-        new NotFoundError({
-          customMessage: "Work order not found",
-          code: "NOT_FOUND",
-          statusCode: 404,
-          metadata: { id, organizationId },
-        })
-      );
+        if (result.length === 0) {
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: "Work order not found",
+          });
+          return Result.fail(
+            new NotFoundError({
+              customMessage: "Work order not found",
+              code: "NOT_FOUND",
+              statusCode: 404,
+              metadata: { id, organizationId },
+            })
+          );
+        }
+
+        return Result.succeed(undefined);
+      } catch (error) {
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: "Failed to delete work order",
+        });
+        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        return Result.fail(
+          new DatabaseError({
+            customMessage: "Failed to delete work order",
+            code: "DATABASE_ERROR",
+            statusCode: 500,
+            metadata: { id, organizationId },
+            cause: error instanceof Error ? error : undefined,
+          })
+        );
+      } finally {
+        span.end();
+      }
     }
-
-    return Result.succeed(undefined);
-  } catch (error) {
-    return Result.fail(
-      new DatabaseError({
-        customMessage: "Failed to delete work order",
-        code: "DATABASE_ERROR",
-        statusCode: 500,
-        metadata: { id, organizationId },
-        cause: error instanceof Error ? error : undefined,
-      })
-    );
-  }
+  );
 }

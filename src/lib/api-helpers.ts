@@ -1,6 +1,8 @@
 import db from "@/lib/db";
 import { member, session } from "@/lib/db/auth-schema";
 import { BaseError, isBaseError } from "@/lib/errors";
+import { serviceTracer } from "@/lib/tracer";
+import { SpanStatusCode } from "@opentelemetry/api";
 import { Result } from "@praha/byethrow";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
@@ -13,31 +15,136 @@ export async function ensureActiveOrganization(sessionData: {
   } | null;
   user: { id: string } | null;
 }): Promise<string | null> {
-  if (!sessionData.session || !sessionData.user) {
-    return null;
-  }
+  return await serviceTracer.startActiveSpan(
+    "auth.ensureActiveOrganization",
+    {
+      attributes: {
+        "auth.operation": "ensureActiveOrganization",
+        "auth.user_id": sessionData.user?.id ?? "",
+        "auth.session_id": sessionData.session?.id ?? "",
+      },
+    },
+    async (span) => {
+      try {
+        if (!sessionData.session || !sessionData.user) {
+          span.setAttribute("auth.resolution_strategy", "no_session");
+          return null;
+        }
 
-  let activeOrgId = sessionData.session.activeOrganizationId ?? null;
+        let activeOrgId = sessionData.session.activeOrganizationId ?? null;
+        span.setAttribute("auth.has_active_org", activeOrgId !== null);
 
-  // If no active organization, check if user has exactly one organization
-  if (!activeOrgId) {
-    const userOrganizations = await db
-      .select({ organizationId: member.organizationId })
-      .from(member)
-      .where(eq(member.userId, sessionData.user.id));
+        // If no active organization, check if user has exactly one organization
+        if (!activeOrgId) {
+          const userOrganizations = await serviceTracer.startActiveSpan(
+            "db.query.select",
+            {
+              attributes: {
+                "db.operation": "select",
+                "db.table": "member",
+                "db.query": "getUserOrganizations",
+              },
+            },
+            async (dbSpan) => {
+              try {
+                const result = await db
+                  .select({ organizationId: member.organizationId })
+                  .from(member)
+                  .where(eq(member.userId, sessionData.user!.id));
+                dbSpan.setAttribute("db.result_count", result.length);
+                return result;
+              } catch (error) {
+                dbSpan.setStatus({
+                  code: SpanStatusCode.ERROR,
+                  message: "Failed to query user organizations",
+                });
+                dbSpan.recordException(
+                  error instanceof Error ? error : new Error(String(error))
+                );
+                throw error;
+              } finally {
+                dbSpan.end();
+              }
+            }
+          );
 
-    // If user has exactly one organization, set it as active
-    if (userOrganizations.length === 1) {
-      activeOrgId = userOrganizations[0].organizationId;
-      // Update the session with the active organization
-      await db
-        .update(session)
-        .set({ activeOrganizationId: activeOrgId })
-        .where(eq(session.id, sessionData.session.id));
+          span.setAttribute(
+            "auth.organization_count",
+            userOrganizations.length
+          );
+
+          // If user has exactly one organization, set it as active
+          if (userOrganizations.length === 1) {
+            activeOrgId = userOrganizations[0].organizationId;
+            span.setAttribute("auth.resolution_strategy", "auto_select_single");
+
+            // Update the session with the active organization
+            await serviceTracer.startActiveSpan(
+              "db.query.update",
+              {
+                attributes: {
+                  "db.operation": "update",
+                  "db.table": "session",
+                  "db.query": "updateActiveOrganization",
+                },
+              },
+              async (updateSpan) => {
+                try {
+                  await db
+                    .update(session)
+                    .set({ activeOrganizationId: activeOrgId })
+                    .where(eq(session.id, sessionData.session!.id));
+                  if (activeOrgId) {
+                    updateSpan.setAttribute(
+                      "auth.organization_id",
+                      activeOrgId
+                    );
+                  }
+                } catch (error) {
+                  updateSpan.setStatus({
+                    code: SpanStatusCode.ERROR,
+                    message: "Failed to update session",
+                  });
+                  updateSpan.recordException(
+                    error instanceof Error ? error : new Error(String(error))
+                  );
+                  throw error;
+                } finally {
+                  updateSpan.end();
+                }
+              }
+            );
+          } else {
+            span.setAttribute(
+              "auth.resolution_strategy",
+              userOrganizations.length === 0
+                ? "no_organizations"
+                : "multiple_organizations"
+            );
+          }
+        } else {
+          span.setAttribute("auth.resolution_strategy", "already_set");
+        }
+
+        if (activeOrgId) {
+          span.setAttribute("auth.organization_id", activeOrgId);
+        }
+
+        return activeOrgId;
+      } catch (error) {
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: error instanceof Error ? error.message : String(error),
+        });
+        span.recordException(
+          error instanceof Error ? error : new Error(String(error))
+        );
+        throw error;
+      } finally {
+        span.end();
+      }
     }
-  }
-
-  return activeOrgId;
+  );
 }
 
 /**
