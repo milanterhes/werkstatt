@@ -1,5 +1,3 @@
-import { protectedProcedure, router } from "../trpc/trpc";
-import { TRPCError } from "@trpc/server";
 import {
   getCustomers,
   getCustomerById,
@@ -8,30 +6,34 @@ import {
   deleteCustomer,
 } from "@/lib/services/customer-service";
 import { customerFormSchema } from "@/lib/db/schemas";
+import { TRPCError } from "@trpc/server";
+import { match, P } from "ts-pattern";
 import { z } from "zod";
+import { protectedProcedure, router } from "../trpc/trpc";
 
 export const customerRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
     const result = await getCustomers(ctx.activeOrganizationId);
-    return result.match(
-      (data) => data,
-      (error) => {
+    return match(result)
+      .with({ type: "Success" }, (r) => r.value)
+      .with({ type: "Failure", error: P.select() }, (error: Error) => {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: error.message,
         });
-      }
-    );
+      })
+      .exhaustive();
   }),
 
   getById: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       const result = await getCustomerById(input.id, ctx.activeOrganizationId);
-      return result.match(
-        (data) => data,
-        (error) => {
-          if (error.message.includes("not found")) {
+      return match(result)
+        .with({ type: "Success" }, ({ value }) => value)
+        .with({ type: "Failure", error: P.select() }, (error: Error) => {
+          const errorMessage = error.message.toLowerCase();
+          if (errorMessage.includes("not found")) {
             throw new TRPCError({
               code: "NOT_FOUND",
               message: error.message,
@@ -41,23 +43,23 @@ export const customerRouter = router({
             code: "INTERNAL_SERVER_ERROR",
             message: error.message,
           });
-        }
-      );
+        })
+        .exhaustive();
     }),
 
   create: protectedProcedure
     .input(customerFormSchema)
     .mutation(async ({ ctx, input }) => {
       const result = await createCustomer(input, ctx.activeOrganizationId);
-      return result.match(
-        (data) => data,
-        (error) => {
+      return match(result)
+        .with({ type: "Success" }, ({ value }) => value)
+        .with({ type: "Failure", error: P.select() }, (error: Error) => {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: error.message,
           });
-        }
-      );
+        })
+        .exhaustive();
     }),
 
   update: protectedProcedure
@@ -73,10 +75,11 @@ export const customerRouter = router({
         input.data,
         ctx.activeOrganizationId
       );
-      return result.match(
-        (data) => data,
-        (error) => {
-          if (error.message.includes("not found")) {
+      return match(result)
+        .with({ type: "Success" }, ({ value }) => value)
+        .with({ type: "Failure", error: P.select() }, (error: Error) => {
+          const errorMessage = error.message.toLowerCase();
+          if (errorMessage.includes("not found")) {
             throw new TRPCError({
               code: "NOT_FOUND",
               message: error.message,
@@ -86,18 +89,19 @@ export const customerRouter = router({
             code: "INTERNAL_SERVER_ERROR",
             message: error.message,
           });
-        }
-      );
+        })
+        .exhaustive();
     }),
 
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const result = await deleteCustomer(input.id, ctx.activeOrganizationId);
-      return result.match(
-        () => ({ success: true }),
-        (error) => {
-          if (error.message.includes("not found")) {
+      match(result)
+        .with({ type: "Success" }, () => {})
+        .with({ type: "Failure", error: P.select() }, (error: Error) => {
+          const errorMessage = error.message.toLowerCase();
+          if (errorMessage.includes("not found")) {
             throw new TRPCError({
               code: "NOT_FOUND",
               message: error.message,
@@ -107,8 +111,9 @@ export const customerRouter = router({
             code: "INTERNAL_SERVER_ERROR",
             message: error.message,
           });
-        }
-      );
+        })
+        .exhaustive();
+      return { success: true };
     }),
 });
 

@@ -7,7 +7,7 @@ import type {
 import { workOrders } from "@/lib/db/work-order-schema";
 import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { Result, err, ok } from "neverthrow";
+import { Result } from "@praha/byethrow";
 
 export type { WorkOrderInput };
 
@@ -19,16 +19,16 @@ export type { WorkOrderInput };
  */
 export async function getWorkOrders(
   organizationId: string
-): Promise<Result<WorkOrder[], Error>> {
+): Promise<Result.Result<WorkOrder[], Error>> {
   try {
     const result = await db
       .select()
       .from(workOrders)
       .where(eq(workOrders.organizationId, organizationId));
 
-    return ok(result);
+    return Result.succeed(result);
   } catch (error) {
-    return err(
+    return Result.fail(
       error instanceof Error ? error : new Error("Failed to fetch work orders")
     );
   }
@@ -44,7 +44,7 @@ export async function getWorkOrders(
 export async function getWorkOrderById(
   id: string,
   organizationId: string
-): Promise<Result<WorkOrder, Error>> {
+): Promise<Result.Result<WorkOrder, Error>> {
   try {
     const result = await db
       .select()
@@ -58,12 +58,12 @@ export async function getWorkOrderById(
       .limit(1);
 
     if (result.length === 0) {
-      return err(new Error("Work order not found"));
+      return Result.fail(new Error("Work order not found"));
     }
 
-    return ok(result[0]);
+    return Result.succeed(result[0]);
   } catch (error) {
-    return err(
+    return Result.fail(
       error instanceof Error ? error : new Error("Failed to fetch work order")
     );
   }
@@ -92,7 +92,7 @@ export async function createWorkOrder(
     completedDate?: Date | string | null;
   },
   organizationId: string
-): Promise<Result<WorkOrder, Error>> {
+): Promise<Result.Result<WorkOrder, Error>> {
   try {
     // Clean up empty strings to null for optional fields
     const cleanedData = Object.fromEntries(
@@ -123,9 +123,9 @@ export async function createWorkOrder(
       } as WorkOrderInput)
       .returning();
 
-    return ok(result[0]);
+    return Result.succeed(result[0]);
   } catch (error) {
-    return err(
+    return Result.fail(
       error instanceof Error ? error : new Error("Failed to create work order")
     );
   }
@@ -158,7 +158,7 @@ export async function updateWorkOrder(
     completedDate?: Date | string | null;
   },
   organizationId: string
-): Promise<Result<WorkOrder, Error>> {
+): Promise<Result.Result<WorkOrder, Error>> {
   try {
     // Clean up empty strings to null for optional fields
     const cleanedData = Object.fromEntries(
@@ -195,12 +195,12 @@ export async function updateWorkOrder(
       .returning();
 
     if (result.length === 0) {
-      return err(new Error("Work order not found"));
+      return Result.fail(new Error("Work order not found"));
     }
 
-    return ok(result[0]);
+    return Result.succeed(result[0]);
   } catch (error) {
-    return err(
+    return Result.fail(
       error instanceof Error ? error : new Error("Failed to update work order")
     );
   }
@@ -220,7 +220,7 @@ export async function updateWorkOrder(
 export async function deleteWorkOrder(
   id: string,
   organizationId: string
-): Promise<Result<void, Error>> {
+): Promise<Result.Result<void, Error>> {
   try {
     const result = await db
       .delete(workOrders)
@@ -233,12 +233,12 @@ export async function deleteWorkOrder(
       .returning();
 
     if (result.length === 0) {
-      return err(new Error("Work order not found"));
+      return Result.fail(new Error("Work order not found"));
     }
 
-    return ok(undefined);
+    return Result.succeed(undefined);
   } catch (error) {
-    return err(
+    return Result.fail(
       error instanceof Error ? error : new Error("Failed to delete work order")
     );
   }

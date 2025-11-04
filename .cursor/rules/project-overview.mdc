@@ -28,7 +28,7 @@ The system is designed to streamline operations for automotive repair shops of a
 - **UI**: React 19, Radix UI, Tailwind CSS 4, shadcn/ui
 - **State**: TanStack Query, React Hook Form
 - **Validation**: Zod
-- **Error Handling**: Neverthrow (Result types)
+- **Error Handling**: Byethrow (Result types)
 
 ## File Organization
 
@@ -69,7 +69,7 @@ src/
 
 ## Dependencies
 
-- Neverthrow for functional error handling
+- Byethrow for functional error handling
 - drizzle-zod for schema generation
 - superjson for Date/Map/Set serialization
 - Better Auth for authentication

@@ -7,19 +7,19 @@ alwaysApply: true
 
 ## Error Handling
 
-Always use Neverthrow Result types in service layer:
+Always use Byethrow Result types in service layer:
 
 ```typescript
-import { Result, ok, err } from "neverthrow";
+import { Result } from "@praha/byethrow";
 
 export async function getCustomers(
   organizationId: string
-): Promise<Result<Customer[], Error>> {
+): Promise<Result.Result<Customer[], Error>> {
   try {
     const result = await db.select()...;
-    return ok(result);
+    return Result.succeed(result);
   } catch (error) {
-    return err(error instanceof Error ? error : new Error("Failed to fetch"));
+    return Result.fail(error instanceof Error ? error : new Error("Failed to fetch"));
   }
 }
 ```

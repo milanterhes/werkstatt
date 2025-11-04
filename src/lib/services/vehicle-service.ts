@@ -3,7 +3,7 @@ import { vehicles } from "@/lib/db/customer-schema";
 import type { Vehicle, VehicleInput } from "@/lib/db/schemas";
 import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { Result, err, ok } from "neverthrow";
+import { Result } from "@praha/byethrow";
 
 export type { VehicleInput };
 
@@ -37,7 +37,7 @@ export interface VehicleFilters {
 export async function getVehicles(
   organizationId: string,
   filters?: VehicleFilters
-): Promise<Result<Vehicle[], Error>> {
+): Promise<Result.Result<Vehicle[], Error>> {
   try {
     const conditions = [eq(vehicles.organizationId, organizationId)];
 
@@ -54,9 +54,9 @@ export async function getVehicles(
       .from(vehicles)
       .where(and(...conditions));
 
-    return ok(result);
+    return Result.succeed(result);
   } catch (error) {
-    return err(
+    return Result.fail(
       error instanceof Error ? error : new Error("Failed to fetch vehicles")
     );
   }
@@ -72,7 +72,7 @@ export async function getVehicles(
 export async function getVehicleById(
   id: string,
   organizationId: string
-): Promise<Result<Vehicle, Error>> {
+): Promise<Result.Result<Vehicle, Error>> {
   try {
     const result = await db
       .select()
@@ -83,12 +83,12 @@ export async function getVehicleById(
       .limit(1);
 
     if (result.length === 0) {
-      return err(new Error("Vehicle not found"));
+      return Result.fail(new Error("Vehicle not found"));
     }
 
-    return ok(result[0]);
+    return Result.succeed(result[0]);
   } catch (error) {
-    return err(
+    return Result.fail(
       error instanceof Error ? error : new Error("Failed to fetch vehicle")
     );
   }
@@ -109,7 +109,7 @@ export async function getVehicleById(
 export async function createVehicle(
   data: Omit<VehicleInput, "id" | "organizationId" | "createdAt" | "updatedAt">,
   organizationId: string
-): Promise<Result<Vehicle, Error>> {
+): Promise<Result.Result<Vehicle, Error>> {
   try {
     // Clean up empty strings to null for optional fields
     const cleanedData = Object.fromEntries(
@@ -128,9 +128,9 @@ export async function createVehicle(
       } as VehicleInput)
       .returning();
 
-    return ok(result[0]);
+    return Result.succeed(result[0]);
   } catch (error) {
-    return err(
+    return Result.fail(
       error instanceof Error ? error : new Error("Failed to create vehicle")
     );
   }
@@ -150,7 +150,7 @@ export async function updateVehicle(
     Omit<VehicleInput, "id" | "organizationId" | "createdAt" | "updatedAt">
   >,
   organizationId: string
-): Promise<Result<Vehicle, Error>> {
+): Promise<Result.Result<Vehicle, Error>> {
   try {
     // Clean up empty strings to null for optional fields
     const cleanedData = Object.fromEntries(
@@ -172,12 +172,12 @@ export async function updateVehicle(
       .returning();
 
     if (result.length === 0) {
-      return err(new Error("Vehicle not found"));
+      return Result.fail(new Error("Vehicle not found"));
     }
 
-    return ok(result[0]);
+    return Result.succeed(result[0]);
   } catch (error) {
-    return err(
+    return Result.fail(
       error instanceof Error ? error : new Error("Failed to update vehicle")
     );
   }
@@ -193,7 +193,7 @@ export async function updateVehicle(
 export async function deleteVehicle(
   id: string,
   organizationId: string
-): Promise<Result<void, Error>> {
+): Promise<Result.Result<void, Error>> {
   try {
     const result = await db
       .delete(vehicles)
@@ -203,12 +203,12 @@ export async function deleteVehicle(
       .returning();
 
     if (result.length === 0) {
-      return err(new Error("Vehicle not found"));
+      return Result.fail(new Error("Vehicle not found"));
     }
 
-    return ok(undefined);
+    return Result.succeed(undefined);
   } catch (error) {
-    return err(
+    return Result.fail(
       error instanceof Error ? error : new Error("Failed to delete vehicle")
     );
   }

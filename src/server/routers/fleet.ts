@@ -1,37 +1,39 @@
-import { protectedProcedure, router } from "../trpc/trpc";
-import { TRPCError } from "@trpc/server";
-import {
-  getFleets,
-  getFleetById,
-  createFleet,
-  updateFleet,
-  deleteFleet,
-} from "@/lib/services/fleet-service";
 import { fleetFormSchema } from "@/lib/db/schemas";
+import {
+  createFleet,
+  deleteFleet,
+  getFleetById,
+  getFleets,
+  updateFleet,
+} from "@/lib/services/fleet-service";
+import { TRPCError } from "@trpc/server";
+import { match, P } from "ts-pattern";
 import { z } from "zod";
+import { protectedProcedure, router } from "../trpc/trpc";
 
 export const fleetRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
     const result = await getFleets(ctx.activeOrganizationId);
-    return result.match(
-      (data) => data,
-      (error) => {
+    return match(result)
+      .with({ type: "Success" }, (r) => r.value)
+      .with({ type: "Failure", error: P.select() }, (error: Error) => {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: error.message,
         });
-      }
-    );
+      })
+      .exhaustive();
   }),
 
   getById: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       const result = await getFleetById(input.id, ctx.activeOrganizationId);
-      return result.match(
-        (data) => data,
-        (error) => {
-          if (error.message.includes("not found")) {
+      return match(result)
+        .with({ type: "Success" }, ({ value }) => value)
+        .with({ type: "Failure", error: P.select() }, (error: Error) => {
+          const errorMessage = error.message.toLowerCase();
+          if (errorMessage.includes("not found")) {
             throw new TRPCError({
               code: "NOT_FOUND",
               message: error.message,
@@ -41,23 +43,23 @@ export const fleetRouter = router({
             code: "INTERNAL_SERVER_ERROR",
             message: error.message,
           });
-        }
-      );
+        })
+        .exhaustive();
     }),
 
   create: protectedProcedure
     .input(fleetFormSchema)
     .mutation(async ({ ctx, input }) => {
       const result = await createFleet(input, ctx.activeOrganizationId);
-      return result.match(
-        (data) => data,
-        (error) => {
+      return match(result)
+        .with({ type: "Success" }, ({ value }) => value)
+        .with({ type: "Failure", error: P.select() }, (error: Error) => {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: error.message,
           });
-        }
-      );
+        })
+        .exhaustive();
     }),
 
   update: protectedProcedure
@@ -73,10 +75,11 @@ export const fleetRouter = router({
         input.data,
         ctx.activeOrganizationId
       );
-      return result.match(
-        (data) => data,
-        (error) => {
-          if (error.message.includes("not found")) {
+      return match(result)
+        .with({ type: "Success" }, ({ value }) => value)
+        .with({ type: "Failure", error: P.select() }, (error: Error) => {
+          const errorMessage = error.message.toLowerCase();
+          if (errorMessage.includes("not found")) {
             throw new TRPCError({
               code: "NOT_FOUND",
               message: error.message,
@@ -86,18 +89,19 @@ export const fleetRouter = router({
             code: "INTERNAL_SERVER_ERROR",
             message: error.message,
           });
-        }
-      );
+        })
+        .exhaustive();
     }),
 
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const result = await deleteFleet(input.id, ctx.activeOrganizationId);
-      return result.match(
-        () => ({ success: true }),
-        (error) => {
-          if (error.message.includes("not found")) {
+      match(result)
+        .with({ type: "Success" }, () => {})
+        .with({ type: "Failure", error: P.select() }, (error: Error) => {
+          const errorMessage = error.message.toLowerCase();
+          if (errorMessage.includes("not found")) {
             throw new TRPCError({
               code: "NOT_FOUND",
               message: error.message,
@@ -107,8 +111,8 @@ export const fleetRouter = router({
             code: "INTERNAL_SERVER_ERROR",
             message: error.message,
           });
-        }
-      );
+        })
+        .exhaustive();
+      return { success: true };
     }),
 });
-

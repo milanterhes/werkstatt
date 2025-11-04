@@ -3,7 +3,7 @@ import { fleets } from "@/lib/db/customer-schema";
 import type { Fleet, FleetInput } from "@/lib/db/schemas";
 import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { Result, err, ok } from "neverthrow";
+import { Result } from "@praha/byethrow";
 
 export type { FleetInput };
 
@@ -15,16 +15,16 @@ export type { FleetInput };
  */
 export async function getFleets(
   organizationId: string
-): Promise<Result<Fleet[], Error>> {
+): Promise<Result.Result<Fleet[], Error>> {
   try {
     const result = await db
       .select()
       .from(fleets)
       .where(eq(fleets.organizationId, organizationId));
 
-    return ok(result);
+    return Result.succeed(result);
   } catch (error) {
-    return err(
+    return Result.fail(
       error instanceof Error ? error : new Error("Failed to fetch fleets")
     );
   }
@@ -40,7 +40,7 @@ export async function getFleets(
 export async function getFleetById(
   id: string,
   organizationId: string
-): Promise<Result<Fleet, Error>> {
+): Promise<Result.Result<Fleet, Error>> {
   try {
     const result = await db
       .select()
@@ -49,12 +49,12 @@ export async function getFleetById(
       .limit(1);
 
     if (result.length === 0) {
-      return err(new Error("Fleet not found"));
+      return Result.fail(new Error("Fleet not found"));
     }
 
-    return ok(result[0]);
+    return Result.succeed(result[0]);
   } catch (error) {
-    return err(
+    return Result.fail(
       error instanceof Error ? error : new Error("Failed to fetch fleet")
     );
   }
@@ -70,7 +70,7 @@ export async function getFleetById(
 export async function createFleet(
   data: Omit<FleetInput, "id" | "organizationId" | "createdAt" | "updatedAt">,
   organizationId: string
-): Promise<Result<Fleet, Error>> {
+): Promise<Result.Result<Fleet, Error>> {
   try {
     // Clean up empty strings to null for optional fields
     const cleanedData = Object.fromEntries(
@@ -89,9 +89,9 @@ export async function createFleet(
       } as FleetInput)
       .returning();
 
-    return ok(result[0]);
+    return Result.succeed(result[0]);
   } catch (error) {
-    return err(
+    return Result.fail(
       error instanceof Error ? error : new Error("Failed to create fleet")
     );
   }
@@ -111,7 +111,7 @@ export async function updateFleet(
     Omit<FleetInput, "id" | "organizationId" | "createdAt" | "updatedAt">
   >,
   organizationId: string
-): Promise<Result<Fleet, Error>> {
+): Promise<Result.Result<Fleet, Error>> {
   try {
     // Clean up empty strings to null for optional fields
     const cleanedData = Object.fromEntries(
@@ -131,12 +131,12 @@ export async function updateFleet(
       .returning();
 
     if (result.length === 0) {
-      return err(new Error("Fleet not found"));
+      return Result.fail(new Error("Fleet not found"));
     }
 
-    return ok(result[0]);
+    return Result.succeed(result[0]);
   } catch (error) {
-    return err(
+    return Result.fail(
       error instanceof Error ? error : new Error("Failed to update fleet")
     );
   }
@@ -152,7 +152,7 @@ export async function updateFleet(
 export async function deleteFleet(
   id: string,
   organizationId: string
-): Promise<Result<void, Error>> {
+): Promise<Result.Result<void, Error>> {
   try {
     const result = await db
       .delete(fleets)
@@ -160,12 +160,12 @@ export async function deleteFleet(
       .returning();
 
     if (result.length === 0) {
-      return err(new Error("Fleet not found"));
+      return Result.fail(new Error("Fleet not found"));
     }
 
-    return ok(undefined);
+    return Result.succeed(undefined);
   } catch (error) {
-    return err(
+    return Result.fail(
       error instanceof Error ? error : new Error("Failed to delete fleet")
     );
   }

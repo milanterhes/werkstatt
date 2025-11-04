@@ -3,7 +3,7 @@ import { customers } from "@/lib/db/customer-schema";
 import type { Customer, CustomerInput } from "@/lib/db/schemas";
 import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { Result, err, ok } from "neverthrow";
+import { Result } from "@praha/byethrow";
 
 export type { CustomerInput };
 
@@ -24,16 +24,16 @@ export type { CustomerInput };
  */
 export async function getCustomers(
   organizationId: string
-): Promise<Result<Customer[], Error>> {
+): Promise<Result.Result<Customer[], Error>> {
   try {
     const result = await db
       .select()
       .from(customers)
       .where(eq(customers.organizationId, organizationId));
 
-    return ok(result);
+    return Result.succeed(result);
   } catch (error) {
-    return err(
+    return Result.fail(
       error instanceof Error ? error : new Error("Failed to fetch customers")
     );
   }
@@ -58,7 +58,7 @@ export async function getCustomers(
 export async function getCustomerById(
   id: string,
   organizationId: string
-): Promise<Result<Customer, Error>> {
+): Promise<Result.Result<Customer, Error>> {
   try {
     const result = await db
       .select()
@@ -69,12 +69,12 @@ export async function getCustomerById(
       .limit(1);
 
     if (result.length === 0) {
-      return err(new Error("Customer not found"));
+      return Result.fail(new Error("Customer not found"));
     }
 
-    return ok(result[0]);
+    return Result.succeed(result[0]);
   } catch (error) {
-    return err(
+    return Result.fail(
       error instanceof Error ? error : new Error("Failed to fetch customer")
     );
   }
@@ -106,7 +106,7 @@ export async function createCustomer(
     "id" | "organizationId" | "createdAt" | "updatedAt"
   >,
   organizationId: string
-): Promise<Result<Customer, Error>> {
+): Promise<Result.Result<Customer, Error>> {
   try {
     // Clean up empty strings to null for optional fields
     const cleanedData = Object.fromEntries(
@@ -125,9 +125,9 @@ export async function createCustomer(
       } as CustomerInput)
       .returning();
 
-    return ok(result[0]);
+    return Result.succeed(result[0]);
   } catch (error) {
-    return err(
+    return Result.fail(
       error instanceof Error ? error : new Error("Failed to create customer")
     );
   }
@@ -161,7 +161,7 @@ export async function updateCustomer(
     Omit<CustomerInput, "id" | "organizationId" | "createdAt" | "updatedAt">
   >,
   organizationId: string
-): Promise<Result<Customer, Error>> {
+): Promise<Result.Result<Customer, Error>> {
   try {
     // Clean up empty strings to null for optional fields
     const cleanedData = Object.fromEntries(
@@ -183,12 +183,12 @@ export async function updateCustomer(
       .returning();
 
     if (result.length === 0) {
-      return err(new Error("Customer not found"));
+      return Result.fail(new Error("Customer not found"));
     }
 
-    return ok(result[0]);
+    return Result.succeed(result[0]);
   } catch (error) {
-    return err(
+    return Result.fail(
       error instanceof Error ? error : new Error("Failed to update customer")
     );
   }
@@ -217,7 +217,7 @@ export async function updateCustomer(
 export async function deleteCustomer(
   id: string,
   organizationId: string
-): Promise<Result<void, Error>> {
+): Promise<Result.Result<void, Error>> {
   try {
     const result = await db
       .delete(customers)
@@ -227,12 +227,12 @@ export async function deleteCustomer(
       .returning();
 
     if (result.length === 0) {
-      return err(new Error("Customer not found"));
+      return Result.fail(new Error("Customer not found"));
     }
 
-    return ok(undefined);
+    return Result.succeed(undefined);
   } catch (error) {
-    return err(
+    return Result.fail(
       error instanceof Error ? error : new Error("Failed to delete customer")
     );
   }

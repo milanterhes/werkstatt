@@ -1,6 +1,6 @@
 import { initTRPC } from "@trpc/server";
 import superjson from "superjson";
-import { createContext, type Context } from "./context";
+import type { Context } from "./context";
 
 /**
  * Initialize tRPC with context
@@ -27,4 +27,3 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
     },
   });
 });
-

@@ -142,13 +142,13 @@ export const workOrderFormSchema = workOrderInsertSchema
   .extend({
     status: z
       .enum(["draft", "in-progress", "completed", "cancelled"])
-      .default("draft"),
+      .optional(),
     createdDate: z.string().optional().nullable(), // Accept string for date input
     dueDate: z.string().optional().nullable(), // Accept string for date input
     completedDate: z.string().optional().nullable(), // Accept string for date input
     laborCosts: z.number().optional().nullable(),
     laborHours: z.number().optional().nullable(),
-    parts: z.array(partSchema).default([]),
+    parts: z.array(partSchema).optional(),
   });
 
 export type WorkOrder = typeof workOrders.$inferSelect;

@@ -1,8 +1,8 @@
 import db from "@/lib/db";
 import { member, session } from "@/lib/db/auth-schema";
+import { Result } from "@praha/byethrow";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { Result } from "neverthrow";
 
 export async function ensureActiveOrganization(sessionData: {
   session: {
@@ -40,33 +40,58 @@ export async function ensureActiveOrganization(sessionData: {
 }
 
 /**
- * Helper function to convert a neverthrow Result to a NextResponse
+ * Determines the appropriate HTTP status code based on error message content
  */
-export function resultToResponse<T>(
-  result: Result<T, Error>,
-  successStatus: number = 200
-): NextResponse {
-  return result.match(
-    (data) => NextResponse.json({ data }, { status: successStatus }),
-    (error) => {
-      console.error("Error:", error);
-      // Determine appropriate status code based on error type
-      const status =
-        error.message.includes("Not found") ||
-        error.message.includes("not found")
-          ? 404
-          : error.message.includes("Unauthorized") ||
-              error.message.includes("unauthorized")
-            ? 401
-            : error.message.includes("Forbidden") ||
-                error.message.includes("forbidden")
-              ? 403
-              : 500;
-      return NextResponse.json(
-        { error: error.message || "Internal server error" },
-        { status }
-      );
-    }
-  );
+function getErrorStatus(errorMessage: string): number {
+  const message = errorMessage.toLowerCase();
+
+  if (message.includes("not found")) {
+    return 404;
+  }
+  if (message.includes("unauthorized")) {
+    return 401;
+  }
+  if (message.includes("forbidden")) {
+    return 403;
+  }
+
+  return 500;
 }
 
+/**
+ * Helper function to convert a byethrow Result to a NextResponse
+ */
+export function resultToResponse<T>(
+  result: Result.ResultMaybeAsync<T, Error>,
+  successStatus: number = 200
+): NextResponse | Promise<NextResponse> {
+  // Handle async results
+  if (result instanceof Promise) {
+    return result.then((resolvedResult) => {
+      if (Result.isFailure(resolvedResult)) {
+        console.error("Error:", resolvedResult.error);
+        const status = getErrorStatus(resolvedResult.error.message);
+        return NextResponse.json(
+          { error: resolvedResult.error.message || "Internal server error" },
+          { status }
+        );
+      }
+      return NextResponse.json(
+        { data: resolvedResult.value },
+        { status: successStatus }
+      );
+    });
+  }
+
+  // Handle sync results
+  if (Result.isFailure(result)) {
+    console.error("Error:", result.error);
+    const status = getErrorStatus(result.error.message);
+    return NextResponse.json(
+      { error: result.error.message || "Internal server error" },
+      { status }
+    );
+  }
+
+  return NextResponse.json({ data: result.value }, { status: successStatus });
+}

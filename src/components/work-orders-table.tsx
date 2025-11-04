@@ -38,9 +38,9 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { WorkOrderForm } from "./work-order-form";
 
 const statusColors: Record<string, string> = {
   draft: "bg-gray-500",
@@ -62,10 +62,7 @@ function formatDate(date: Date | null | undefined): string {
 }
 
 export function WorkOrdersTable() {
-  const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrder | null>(
-    null
-  );
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const router = useRouter();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [workOrderToDelete, setWorkOrderToDelete] = useState<WorkOrder | null>(
     null
@@ -90,8 +87,7 @@ export function WorkOrdersTable() {
   });
 
   function handleEdit(workOrder: WorkOrder) {
-    setSelectedWorkOrder(workOrder);
-    setIsFormOpen(true);
+    router.push(`/work-orders/${workOrder.id}/edit`);
   }
 
   function handleDelete(workOrder: WorkOrder) {
@@ -100,8 +96,7 @@ export function WorkOrdersTable() {
   }
 
   function handleCreate() {
-    setSelectedWorkOrder(null);
-    setIsFormOpen(true);
+    router.push("/work-orders/new");
   }
 
   const columns = useMemo<ColumnDef<WorkOrder>[]>(
@@ -217,53 +212,6 @@ export function WorkOrdersTable() {
           Create Work Order
         </Button>
       </div>
-
-      <WorkOrderForm
-        open={isFormOpen}
-        onOpenChange={setIsFormOpen}
-        initialData={
-          selectedWorkOrder
-            ? {
-                ...selectedWorkOrder,
-                id: selectedWorkOrder.id,
-                title: selectedWorkOrder.title || "",
-                description: selectedWorkOrder.description ?? undefined,
-                status:
-                  (selectedWorkOrder.status as
-                    | "draft"
-                    | "in-progress"
-                    | "completed"
-                    | "cancelled") || "draft",
-                notes: selectedWorkOrder.notes ?? undefined,
-                customerId: selectedWorkOrder.customerId ?? undefined,
-                vehicleId: selectedWorkOrder.vehicleId ?? undefined,
-                createdDate: selectedWorkOrder.createdDate
-                  ? new Date(selectedWorkOrder.createdDate)
-                      .toISOString()
-                      .split("T")[0]
-                  : undefined,
-                dueDate: selectedWorkOrder.dueDate
-                  ? new Date(selectedWorkOrder.dueDate)
-                      .toISOString()
-                      .split("T")[0]
-                  : undefined,
-                completedDate: selectedWorkOrder.completedDate
-                  ? new Date(selectedWorkOrder.completedDate)
-                      .toISOString()
-                      .split("T")[0]
-                  : undefined,
-                laborCosts: selectedWorkOrder.laborCosts ?? undefined,
-                laborHours: selectedWorkOrder.laborHours ?? undefined,
-                parts:
-                  (selectedWorkOrder.parts as Array<{
-                    partNumber: string;
-                    buyPrice: number;
-                    customerPrice: number;
-                  }>) || [],
-              }
-            : null
-        }
-      />
 
       <div className="border rounded-lg">
         <Table>
