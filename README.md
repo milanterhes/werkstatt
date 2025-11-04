@@ -28,6 +28,7 @@ Werkstatt Next is a full-stack application that helps automotive workshops manag
 - 👥 Customer management
 - 🚗 Vehicle tracking and management
 - 🚛 Fleet management
+- 📋 Work order tracking and management
 - 🏢 Workshop details and configuration
 - 📱 Responsive UI with modern design
 - 🔒 Type-safe API calls with tRPC
@@ -35,7 +36,6 @@ Werkstatt Next is a full-stack application that helps automotive workshops manag
 
 ### Planned Features
 
-- 📋 Work order tracking and management
 - 💰 Invoicing and payment processing
 - 🔧 Service interval tracking and reminders
 - 📊 Reporting and analytics
@@ -109,6 +109,7 @@ werkstatt-next/
 │   │   ├── customers/         # Customer management pages
 │   │   ├── vehicles/          # Vehicle management pages
 │   │   ├── fleets/            # Fleet management pages
+│   │   ├── work-orders/       # Work order management pages
 │   │   └── settings/          # Settings page
 │   ├── components/            # React components
 │   │   ├── ui/                # shadcn/ui components
@@ -147,11 +148,11 @@ The application uses the following main entities:
 - **Customer** - Customer contact and address information
 - **Vehicle** - Vehicle details (license plate, VIN, make, model, etc.)
 - **Fleet** - Fleet/group of vehicles
+- **Work Order** - Service requests and repair orders with parts tracking
 - **Workshop Details** - Workshop/company configuration and invoicing settings
 
 ### Planned Entities
 
-- **Work Orders** - Service requests and repair orders
 - **Invoices** - Billing and payment tracking
 - **Service Intervals** - Scheduled maintenance and reminders
 - **Parts Inventory** - Parts and supplies management

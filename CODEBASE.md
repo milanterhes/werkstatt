@@ -43,10 +43,12 @@ app/
 ├── customers/page.tsx           # Customer list page
 ├── vehicles/page.tsx            # Vehicle list page
 ├── fleets/page.tsx              # Fleet list page
+├── work-orders/page.tsx        # Work order list page
 └── settings/page.tsx            # Settings page
 ```
 
 **Conventions:**
+
 - Use App Router conventions (page.tsx, layout.tsx)
 - API routes in `app/api/`
 - Pages are server components by default
@@ -76,12 +78,15 @@ components/
 ├── vehicles-table.tsx          # Vehicle data table
 ├── fleet-form.tsx             # Fleet form component
 ├── fleets-table.tsx           # Fleet data table
+├── work-order-form.tsx        # Work order form component
+├── work-orders-table.tsx      # Work order data table
 ├── workshop-details-form.tsx   # Workshop settings form
 ├── settings.tsx                # Settings page component
 └── home.tsx                    # Home page component
 ```
 
 **Conventions:**
+
 - Feature components: `*-form.tsx`, `*-table.tsx`
 - UI components in `ui/` directory (shadcn/ui)
 - Use PascalCase for component names
@@ -97,12 +102,14 @@ lib/
 │   ├── index.ts               # Database exports
 │   ├── auth-schema.ts         # Better Auth tables (generated)
 │   ├── customer-schema.ts     # Customers, Vehicles, Fleets tables
+│   ├── work-order-schema.ts   # Work Orders table
 │   ├── workshop-schema.ts     # Workshop details table
 │   └── schemas.ts             # Zod schemas (generated from Drizzle)
 ├── services/
 │   ├── customer-service.ts    # Customer business logic
 │   ├── vehicle-service.ts     # Vehicle business logic
-│   └── fleet-service.ts       # Fleet business logic
+│   ├── fleet-service.ts       # Fleet business logic
+│   └── work-order-service.ts  # Work order business logic
 ├── auth.ts                    # Better Auth configuration
 ├── auth-client.ts             # Better Auth client setup
 ├── db.ts                      # Drizzle database instance
@@ -112,6 +119,7 @@ lib/
 ```
 
 **Conventions:**
+
 - `db/` - Database schemas and types
 - `services/` - Business logic layer (returns Result types)
 - Configuration files at root level
@@ -127,6 +135,7 @@ server/
 │   ├── customer.ts            # Customer tRPC router
 │   ├── vehicle.ts             # Vehicle tRPC router
 │   ├── fleet.ts               # Fleet tRPC router
+│   ├── work-order.ts          # Work order tRPC router
 │   └── workshop.ts            # Workshop tRPC router
 └── trpc/
     ├── router.ts              # Main app router
@@ -135,6 +144,7 @@ server/
 ```
 
 **Conventions:**
+
 - One router file per domain entity
 - Routers export a `*Router` constant
 - Main router combines all sub-routers
@@ -150,6 +160,7 @@ hooks/
 ```
 
 **Conventions:**
+
 - Custom hooks prefixed with `use`
 - One hook per file
 
@@ -170,6 +181,7 @@ drizzle/
 ```
 
 **Conventions:**
+
 - Sequential numbered migrations
 - Descriptive names
 - Meta directory contains migration metadata
@@ -205,6 +217,7 @@ drizzle/
 4. Type imports (with `type` keyword)
 
 Example:
+
 ```typescript
 import { Result, ok, err } from "neverthrow";
 import { z } from "zod";
@@ -231,9 +244,9 @@ export function CustomerForm() {
   const form = useForm<CustomerFormInput>({
     resolver: zodResolver(customerFormSchema),
   });
-  
+
   const mutation = trpc.customers.create.useMutation();
-  
+
   // ... form implementation
 }
 ```
@@ -249,12 +262,12 @@ import { trpc } from "@/lib/trpc";
 
 export function CustomersTable() {
   const { data, isLoading } = trpc.customers.list.useQuery();
-  
+
   const table = useReactTable({
     data: data ?? [],
     // ... table configuration
   });
-  
+
   // ... table rendering
 }
 ```
@@ -277,7 +290,7 @@ export async function getCustomers(
       .select()
       .from(customers)
       .where(eq(customers.organizationId, organizationId));
-    
+
     return ok(result);
   } catch (error) {
     return err(error instanceof Error ? error : new Error("Failed to fetch"));
@@ -314,29 +327,35 @@ export const customerRouter = router({
 ### Adding a New Feature
 
 1. **Database Schema** (`src/lib/db/*-schema.ts`)
+
    - Define Drizzle table
    - Add relationships
    - Include `organizationId` and timestamps
 
 2. **Zod Schemas** (`src/lib/db/schemas.ts`)
+
    - Auto-generated via drizzle-zod
    - Add form schema variations
 
 3. **Service Layer** (`src/lib/services/*-service.ts`)
+
    - Create CRUD functions
    - Return Result types
    - Filter by organizationId
 
 4. **tRPC Router** (`src/server/routers/*.ts`)
+
    - Create router with procedures
    - Convert Result to tRPC errors
    - Use protectedProcedure
 
 5. **Add to Main Router** (`src/server/trpc/router.ts`)
+
    - Import router
    - Add to appRouter
 
 6. **Components** (`src/components/`)
+
    - Create form component
    - Create table component
    - Use tRPC hooks
@@ -365,20 +384,15 @@ __tests__/
 └── components/
 ```
 
-## Planned Directory Structure
-
 As the system grows to include additional features, the following structure is planned:
 
 ```
 app/
-├── work-orders/          # Work order management pages
 ├── invoices/             # Invoice management pages
 ├── appointments/         # Appointment scheduling pages
 └── reports/              # Reporting and analytics pages
 
 components/
-├── work-order-form.tsx
-├── work-orders-table.tsx
 ├── invoice-form.tsx
 ├── invoices-table.tsx
 ├── appointment-calendar.tsx
@@ -386,19 +400,16 @@ components/
 
 lib/
 ├── db/
-│   ├── work-order-schema.ts
 │   ├── invoice-schema.ts
 │   ├── service-interval-schema.ts
 │   └── parts-schema.ts
 ├── services/
-│   ├── work-order-service.ts
 │   ├── invoice-service.ts
 │   ├── service-interval-service.ts
 │   └── parts-service.ts
 
 server/
 └── routers/
-    ├── work-order.ts
     ├── invoice.ts
     ├── service-interval.ts
     └── parts.ts
@@ -412,4 +423,3 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for details on planned features.
 - `ARCHITECTURE.md` - Technical architecture
 - `CODEBASE.md` - This file (structure and conventions)
 - `.cursorrules` - Cursor AI context
-

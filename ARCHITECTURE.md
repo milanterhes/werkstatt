@@ -101,6 +101,7 @@ App Router
       ├─ customers (customerRouter)
       ├─ vehicles (vehicleRouter)
       ├─ fleets (fleetRouter)
+      ├─ workOrders (workOrderRouter)
       └─ workshop (workshopRouter)
 ```
 
@@ -174,6 +175,7 @@ Database schemas are organized by domain:
 
 - `src/lib/db/auth-schema.ts` - Better Auth tables (auto-generated)
 - `src/lib/db/customer-schema.ts` - Customers, Vehicles, Fleets
+- `src/lib/db/work-order-schema.ts` - Work Orders
 - `src/lib/db/workshop-schema.ts` - Workshop details
 
 ### Relationships
@@ -184,6 +186,9 @@ Organization (Better Auth)
   │   ├─ Vehicles (1:N)
   │   └─ Fleets (1:N)
   │       └─ Vehicles (1:N)
+  ├─ Work Orders (1:N)
+  │   ├─ Customer (N:1, optional)
+  │   └─ Vehicle (N:1, optional)
   └─ Workshop Details (1:1)
 ```
 
@@ -338,16 +343,50 @@ Optional:
 - Server-side rendering where beneficial
 - Client-side navigation for SPA-like experience
 
-## Future Considerations
+## Work Orders
+
+### Implementation
+
+Work orders are fully implemented and include:
+
+- **Core Features**
+  - Create, read, update, and delete work orders
+  - Status tracking (draft, in-progress, completed, cancelled)
+  - Optional customer and vehicle assignment
+  - Title, description, and notes fields
+  - Date tracking (created, due, completed)
+  - Labor costs and hours tracking
+
+- **Parts Management**
+  - JSONB array storage for parts list
+  - Each part includes: part number, buy price, customer price
+  - Dynamic add/remove functionality in forms
+  - Parts totals calculation (buy price and customer price)
+
+- **Database Schema**
+  - `work_orders` table with all fields
+  - Foreign keys to customers and vehicles (optional, set null on delete)
+  - Organization-scoped with cascade delete
+  - JSONB column for parts array
+
+- **Service Layer**
+  - Full CRUD operations with Result types
+  - Date string to Date object conversion
+  - Empty string to null conversion for optional fields
+
+- **API Layer**
+  - tRPC router with list, getById, create, update, delete procedures
+  - Date string handling in form inputs
+  - Proper error handling and type safety
+
+- **Frontend**
+  - Work order form with all fields
+  - Parts management UI with add/remove functionality
+  - Customer and vehicle selects (vehicle filters by customer)
+  - Work orders table with status badges
+  - Full CRUD interface with edit/delete actions
 
 ### Core Features (Planned)
-
-- **Work Order Management**
-  - Create and track work orders/service requests
-  - Status tracking (open, in-progress, completed, cancelled)
-  - Labor and parts assignment
-  - Technician assignment
-  - Work order history and timeline
 
 - **Invoicing System**
   - Generate invoices from work orders
