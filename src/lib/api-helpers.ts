@@ -1,5 +1,6 @@
 import db from "@/lib/db";
 import { member, session } from "@/lib/db/auth-schema";
+import { BaseError, isBaseError } from "@/lib/errors";
 import { Result } from "@praha/byethrow";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
@@ -40,19 +41,25 @@ export async function ensureActiveOrganization(sessionData: {
 }
 
 /**
- * Determines the appropriate HTTP status code based on error message content
+ * Determines the appropriate HTTP status code based on error type.
+ * Uses BaseError statusCode if available, otherwise falls back to message parsing.
  */
-function getErrorStatus(errorMessage: string): number {
-  const message = errorMessage.toLowerCase();
+function getErrorStatus(error: unknown): number {
+  if (isBaseError(error)) {
+    return error.statusCode;
+  }
 
-  if (message.includes("not found")) {
-    return 404;
-  }
-  if (message.includes("unauthorized")) {
-    return 401;
-  }
-  if (message.includes("forbidden")) {
-    return 403;
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    if (message.includes("not found")) {
+      return 404;
+    }
+    if (message.includes("unauthorized")) {
+      return 401;
+    }
+    if (message.includes("forbidden")) {
+      return 403;
+    }
   }
 
   return 500;
@@ -62,7 +69,7 @@ function getErrorStatus(errorMessage: string): number {
  * Helper function to convert a byethrow Result to a NextResponse
  */
 export function resultToResponse<T>(
-  result: Result.ResultMaybeAsync<T, Error>,
+  result: Result.ResultMaybeAsync<T, BaseError | Error>,
   successStatus: number = 200
 ): NextResponse | Promise<NextResponse> {
   // Handle async results
@@ -70,7 +77,7 @@ export function resultToResponse<T>(
     return result.then((resolvedResult) => {
       if (Result.isFailure(resolvedResult)) {
         console.error("Error:", resolvedResult.error);
-        const status = getErrorStatus(resolvedResult.error.message);
+        const status = getErrorStatus(resolvedResult.error);
         return NextResponse.json(
           { error: resolvedResult.error.message || "Internal server error" },
           { status }
@@ -86,7 +93,7 @@ export function resultToResponse<T>(
   // Handle sync results
   if (Result.isFailure(result)) {
     console.error("Error:", result.error);
-    const status = getErrorStatus(result.error.message);
+    const status = getErrorStatus(result.error);
     return NextResponse.json(
       { error: result.error.message || "Internal server error" },
       { status }

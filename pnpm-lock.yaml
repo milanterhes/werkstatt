@@ -14,6 +14,9 @@ importers:
       '@praha/byethrow':
         specifier: ^0.8.1
         version: 0.8.1(typescript@5.9.3)
+      '@praha/error-factory':
+        specifier: ^1.2.1
+        version: 1.2.1
       '@radix-ui/react-accordion':
         specifier: ^1.2.12
         version: 1.2.12(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -982,6 +985,9 @@ packages:
     resolution: {integrity: sha512-THvagF+Fq43PV6NMkPjNt9aN1fP8LZdKBqNNHvdFmIv2oi2gy3ryU6HYTQqOT5LHsbD7Ih2qySvsW5gGPgGoCA==}
     peerDependencies:
       typescript: '>=5.0.0'
+
+  '@praha/error-factory@1.2.1':
+    resolution: {integrity: sha512-F4KIuX48NLPlW/y95QrtJp2zUhAFkmHcOfXOyBWsGjFD82DUI+7aTYlFQ44Oci0rtCMSRAFHlgHlxcs1V9n9fg==}
 
   '@radix-ui/number@1.1.1':
     resolution: {integrity: sha512-MkKCwxlXTgz6CFoJx3pCwn07GKp36+aZyu/u2Ln2VrA5DcdyCZkASEDBTd8x5whTQQL5CiYf4prXKLcgQdv29g==}
@@ -4395,6 +4401,8 @@ snapshots:
     dependencies:
       '@standard-schema/spec': 1.0.0
       typescript: 5.9.3
+
+  '@praha/error-factory@1.2.1': {}
 
   '@radix-ui/number@1.1.1': {}
 

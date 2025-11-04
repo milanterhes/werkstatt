@@ -1,18 +1,19 @@
 import db from "@/lib/db";
 import { customers } from "@/lib/db/customer-schema";
 import type { Customer, CustomerInput } from "@/lib/db/schemas";
+import { BaseError, DatabaseError, NotFoundError } from "@/lib/errors";
+import { Result } from "@praha/byethrow";
 import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { Result } from "@praha/byethrow";
 
 export type { CustomerInput };
 
 /**
  * Retrieves all customers for a given organization.
- * 
+ *
  * @param organizationId - The ID of the organization to fetch customers for
  * @returns A Result containing an array of customers or an error
- * 
+ *
  * @example
  * ```typescript
  * const result = await getCustomers(orgId);
@@ -24,7 +25,7 @@ export type { CustomerInput };
  */
 export async function getCustomers(
   organizationId: string
-): Promise<Result.Result<Customer[], Error>> {
+): Promise<Result.Result<Customer[], BaseError>> {
   try {
     const result = await db
       .select()
@@ -34,18 +35,23 @@ export async function getCustomers(
     return Result.succeed(result);
   } catch (error) {
     return Result.fail(
-      error instanceof Error ? error : new Error("Failed to fetch customers")
+      new DatabaseError({
+        customMessage: "Failed to fetch customers",
+        code: "DATABASE_ERROR",
+        statusCode: 500,
+        cause: error instanceof Error ? error : undefined,
+      })
     );
   }
 }
 
 /**
  * Retrieves a single customer by ID.
- * 
+ *
  * @param id - The customer ID to fetch
  * @param organizationId - The ID of the organization (for security/tenant isolation)
  * @returns A Result containing the customer or an error if not found
- * 
+ *
  * @example
  * ```typescript
  * const result = await getCustomerById(customerId, orgId);
@@ -58,7 +64,7 @@ export async function getCustomers(
 export async function getCustomerById(
   id: string,
   organizationId: string
-): Promise<Result.Result<Customer, Error>> {
+): Promise<Result.Result<Customer, BaseError>> {
   try {
     const result = await db
       .select()
@@ -69,29 +75,42 @@ export async function getCustomerById(
       .limit(1);
 
     if (result.length === 0) {
-      return Result.fail(new Error("Customer not found"));
+      return Result.fail(
+        new NotFoundError({
+          customMessage: "Customer not found",
+          code: "NOT_FOUND",
+          statusCode: 404,
+          metadata: { id, organizationId },
+        })
+      );
     }
 
     return Result.succeed(result[0]);
   } catch (error) {
     return Result.fail(
-      error instanceof Error ? error : new Error("Failed to fetch customer")
+      new DatabaseError({
+        customMessage: "Failed to fetch customer",
+        code: "DATABASE_ERROR",
+        statusCode: 500,
+        metadata: { id, organizationId },
+        cause: error instanceof Error ? error : undefined,
+      })
     );
   }
 }
 
 /**
  * Creates a new customer.
- * 
+ *
  * @param data - Customer data (excluding auto-generated fields)
  * @param organizationId - The ID of the organization to create the customer for
  * @returns A Result containing the created customer or an error
- * 
+ *
  * @remarks
  * - Automatically generates a new ID using nanoid()
  * - Converts empty strings to null for optional fields
  * - Sets timestamps automatically
- * 
+ *
  * @example
  * ```typescript
  * const result = await createCustomer(
@@ -106,7 +125,7 @@ export async function createCustomer(
     "id" | "organizationId" | "createdAt" | "updatedAt"
   >,
   organizationId: string
-): Promise<Result.Result<Customer, Error>> {
+): Promise<Result.Result<Customer, BaseError>> {
   try {
     // Clean up empty strings to null for optional fields
     const cleanedData = Object.fromEntries(
@@ -128,24 +147,30 @@ export async function createCustomer(
     return Result.succeed(result[0]);
   } catch (error) {
     return Result.fail(
-      error instanceof Error ? error : new Error("Failed to create customer")
+      new DatabaseError({
+        customMessage: "Failed to create customer",
+        code: "DATABASE_ERROR",
+        statusCode: 500,
+        metadata: { organizationId },
+        cause: error instanceof Error ? error : undefined,
+      })
     );
   }
 }
 
 /**
  * Updates an existing customer.
- * 
+ *
  * @param id - The customer ID to update
  * @param data - Partial customer data to update
  * @param organizationId - The ID of the organization (for security/tenant isolation)
  * @returns A Result containing the updated customer or an error if not found
- * 
+ *
  * @remarks
  * - Converts empty strings to null for optional fields
  * - Automatically updates the updatedAt timestamp
  * - Only updates fields provided in the data parameter
- * 
+ *
  * @example
  * ```typescript
  * const result = await updateCustomer(
@@ -161,7 +186,7 @@ export async function updateCustomer(
     Omit<CustomerInput, "id" | "organizationId" | "createdAt" | "updatedAt">
   >,
   organizationId: string
-): Promise<Result.Result<Customer, Error>> {
+): Promise<Result.Result<Customer, BaseError>> {
   try {
     // Clean up empty strings to null for optional fields
     const cleanedData = Object.fromEntries(
@@ -183,28 +208,41 @@ export async function updateCustomer(
       .returning();
 
     if (result.length === 0) {
-      return Result.fail(new Error("Customer not found"));
+      return Result.fail(
+        new NotFoundError({
+          customMessage: "Customer not found",
+          code: "NOT_FOUND",
+          statusCode: 404,
+          metadata: { id, organizationId },
+        })
+      );
     }
 
     return Result.succeed(result[0]);
   } catch (error) {
     return Result.fail(
-      error instanceof Error ? error : new Error("Failed to update customer")
+      new DatabaseError({
+        customMessage: "Failed to update customer",
+        code: "DATABASE_ERROR",
+        statusCode: 500,
+        metadata: { id, organizationId },
+        cause: error instanceof Error ? error : undefined,
+      })
     );
   }
 }
 
 /**
  * Deletes a customer by ID.
- * 
+ *
  * @param id - The customer ID to delete
  * @param organizationId - The ID of the organization (for security/tenant isolation)
  * @returns A Result containing void on success or an error if not found
- * 
+ *
  * @remarks
  * - Returns an error if the customer doesn't exist
  * - Cascade deletes are handled at the database level for related records
- * 
+ *
  * @example
  * ```typescript
  * const result = await deleteCustomer(customerId, orgId);
@@ -217,7 +255,7 @@ export async function updateCustomer(
 export async function deleteCustomer(
   id: string,
   organizationId: string
-): Promise<Result.Result<void, Error>> {
+): Promise<Result.Result<void, BaseError>> {
   try {
     const result = await db
       .delete(customers)
@@ -227,13 +265,26 @@ export async function deleteCustomer(
       .returning();
 
     if (result.length === 0) {
-      return Result.fail(new Error("Customer not found"));
+      return Result.fail(
+        new NotFoundError({
+          customMessage: "Customer not found",
+          code: "NOT_FOUND",
+          statusCode: 404,
+          metadata: { id, organizationId },
+        })
+      );
     }
 
     return Result.succeed(undefined);
   } catch (error) {
     return Result.fail(
-      error instanceof Error ? error : new Error("Failed to delete customer")
+      new DatabaseError({
+        customMessage: "Failed to delete customer",
+        code: "DATABASE_ERROR",
+        statusCode: 500,
+        metadata: { id, organizationId },
+        cause: error instanceof Error ? error : undefined,
+      })
     );
   }
 }

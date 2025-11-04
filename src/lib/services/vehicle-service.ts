@@ -1,9 +1,10 @@
 import db from "@/lib/db";
 import { vehicles } from "@/lib/db/customer-schema";
 import type { Vehicle, VehicleInput } from "@/lib/db/schemas";
+import { BaseError, DatabaseError, NotFoundError } from "@/lib/errors";
+import { Result } from "@praha/byethrow";
 import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { Result } from "@praha/byethrow";
 
 export type { VehicleInput };
 
@@ -17,19 +18,19 @@ export interface VehicleFilters {
 
 /**
  * Retrieves all vehicles for a given organization, optionally filtered.
- * 
+ *
  * @param organizationId - The ID of the organization to fetch vehicles for
  * @param filters - Optional filters to narrow down results (by customer or fleet)
  * @returns A Result containing an array of vehicles or an error
- * 
+ *
  * @example
  * ```typescript
  * // Get all vehicles for an organization
  * const result = await getVehicles(orgId);
- * 
+ *
  * // Get vehicles for a specific customer
  * const result = await getVehicles(orgId, { customerId: "customer-123" });
- * 
+ *
  * // Get vehicles for a specific fleet
  * const result = await getVehicles(orgId, { fleetId: "fleet-456" });
  * ```
@@ -37,7 +38,7 @@ export interface VehicleFilters {
 export async function getVehicles(
   organizationId: string,
   filters?: VehicleFilters
-): Promise<Result.Result<Vehicle[], Error>> {
+): Promise<Result.Result<Vehicle[], BaseError>> {
   try {
     const conditions = [eq(vehicles.organizationId, organizationId)];
 
@@ -57,14 +58,20 @@ export async function getVehicles(
     return Result.succeed(result);
   } catch (error) {
     return Result.fail(
-      error instanceof Error ? error : new Error("Failed to fetch vehicles")
+      new DatabaseError({
+        customMessage: "Failed to fetch vehicles",
+        code: "DATABASE_ERROR",
+        statusCode: 500,
+        metadata: { organizationId, filters },
+        cause: error instanceof Error ? error : undefined,
+      })
     );
   }
 }
 
 /**
  * Retrieves a single vehicle by ID.
- * 
+ *
  * @param id - The vehicle ID to fetch
  * @param organizationId - The ID of the organization (for security/tenant isolation)
  * @returns A Result containing the vehicle or an error if not found
@@ -72,7 +79,7 @@ export async function getVehicles(
 export async function getVehicleById(
   id: string,
   organizationId: string
-): Promise<Result.Result<Vehicle, Error>> {
+): Promise<Result.Result<Vehicle, BaseError>> {
   try {
     const result = await db
       .select()
@@ -83,24 +90,37 @@ export async function getVehicleById(
       .limit(1);
 
     if (result.length === 0) {
-      return Result.fail(new Error("Vehicle not found"));
+      return Result.fail(
+        new NotFoundError({
+          customMessage: "Vehicle not found",
+          code: "NOT_FOUND",
+          statusCode: 404,
+          metadata: { id, organizationId },
+        })
+      );
     }
 
     return Result.succeed(result[0]);
   } catch (error) {
     return Result.fail(
-      error instanceof Error ? error : new Error("Failed to fetch vehicle")
+      new DatabaseError({
+        customMessage: "Failed to fetch vehicle",
+        code: "DATABASE_ERROR",
+        statusCode: 500,
+        metadata: { id, organizationId },
+        cause: error instanceof Error ? error : undefined,
+      })
     );
   }
 }
 
 /**
  * Creates a new vehicle.
- * 
+ *
  * @param data - Vehicle data (excluding auto-generated fields)
  * @param organizationId - The ID of the organization to create the vehicle for
  * @returns A Result containing the created vehicle or an error
- * 
+ *
  * @remarks
  * - Automatically generates a new ID using nanoid()
  * - Converts empty strings to null for optional fields
@@ -109,7 +129,7 @@ export async function getVehicleById(
 export async function createVehicle(
   data: Omit<VehicleInput, "id" | "organizationId" | "createdAt" | "updatedAt">,
   organizationId: string
-): Promise<Result.Result<Vehicle, Error>> {
+): Promise<Result.Result<Vehicle, BaseError>> {
   try {
     // Clean up empty strings to null for optional fields
     const cleanedData = Object.fromEntries(
@@ -131,14 +151,20 @@ export async function createVehicle(
     return Result.succeed(result[0]);
   } catch (error) {
     return Result.fail(
-      error instanceof Error ? error : new Error("Failed to create vehicle")
+      new DatabaseError({
+        customMessage: "Failed to create vehicle",
+        code: "DATABASE_ERROR",
+        statusCode: 500,
+        metadata: { organizationId },
+        cause: error instanceof Error ? error : undefined,
+      })
     );
   }
 }
 
 /**
  * Updates an existing vehicle.
- * 
+ *
  * @param id - The vehicle ID to update
  * @param data - Partial vehicle data to update
  * @param organizationId - The ID of the organization (for security/tenant isolation)
@@ -150,7 +176,7 @@ export async function updateVehicle(
     Omit<VehicleInput, "id" | "organizationId" | "createdAt" | "updatedAt">
   >,
   organizationId: string
-): Promise<Result.Result<Vehicle, Error>> {
+): Promise<Result.Result<Vehicle, BaseError>> {
   try {
     // Clean up empty strings to null for optional fields
     const cleanedData = Object.fromEntries(
@@ -172,20 +198,33 @@ export async function updateVehicle(
       .returning();
 
     if (result.length === 0) {
-      return Result.fail(new Error("Vehicle not found"));
+      return Result.fail(
+        new NotFoundError({
+          customMessage: "Vehicle not found",
+          code: "NOT_FOUND",
+          statusCode: 404,
+          metadata: { id, organizationId },
+        })
+      );
     }
 
     return Result.succeed(result[0]);
   } catch (error) {
     return Result.fail(
-      error instanceof Error ? error : new Error("Failed to update vehicle")
+      new DatabaseError({
+        customMessage: "Failed to update vehicle",
+        code: "DATABASE_ERROR",
+        statusCode: 500,
+        metadata: { id, organizationId },
+        cause: error instanceof Error ? error : undefined,
+      })
     );
   }
 }
 
 /**
  * Deletes a vehicle by ID.
- * 
+ *
  * @param id - The vehicle ID to delete
  * @param organizationId - The ID of the organization (for security/tenant isolation)
  * @returns A Result containing void on success or an error if not found
@@ -193,7 +232,7 @@ export async function updateVehicle(
 export async function deleteVehicle(
   id: string,
   organizationId: string
-): Promise<Result.Result<void, Error>> {
+): Promise<Result.Result<void, BaseError>> {
   try {
     const result = await db
       .delete(vehicles)
@@ -203,13 +242,26 @@ export async function deleteVehicle(
       .returning();
 
     if (result.length === 0) {
-      return Result.fail(new Error("Vehicle not found"));
+      return Result.fail(
+        new NotFoundError({
+          customMessage: "Vehicle not found",
+          code: "NOT_FOUND",
+          statusCode: 404,
+          metadata: { id, organizationId },
+        })
+      );
     }
 
     return Result.succeed(undefined);
   } catch (error) {
     return Result.fail(
-      error instanceof Error ? error : new Error("Failed to delete vehicle")
+      new DatabaseError({
+        customMessage: "Failed to delete vehicle",
+        code: "DATABASE_ERROR",
+        statusCode: 500,
+        metadata: { id, organizationId },
+        cause: error instanceof Error ? error : undefined,
+      })
     );
   }
 }

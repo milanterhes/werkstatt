@@ -10,13 +10,14 @@ import { TRPCError } from "@trpc/server";
 import { match, P } from "ts-pattern";
 import { z } from "zod";
 import { protectedProcedure, router } from "../trpc/trpc";
+import { NotFoundError } from "@/lib/errors";
 
 export const workOrderRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
     const result = await getWorkOrders(ctx.activeOrganizationId);
     return match(result)
       .with({ type: "Success" }, (r) => r.value)
-      .with({ type: "Failure", error: P.select() }, (error: Error) => {
+      .with({ type: "Failure", error: P.select() }, (error) => {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: error.message,
@@ -31,9 +32,8 @@ export const workOrderRouter = router({
       const result = await getWorkOrderById(input.id, ctx.activeOrganizationId);
       return match(result)
         .with({ type: "Success" }, ({ value }) => value)
-        .with({ type: "Failure", error: P.select() }, (error: Error) => {
-          const errorMessage = error.message.toLowerCase();
-          if (errorMessage.includes("not found")) {
+        .with({ type: "Failure", error: P.select() }, (error) => {
+          if (error instanceof NotFoundError) {
             throw new TRPCError({
               code: "NOT_FOUND",
               message: error.message,
@@ -65,7 +65,7 @@ export const workOrderRouter = router({
       );
       return match(result)
         .with({ type: "Success" }, ({ value }) => value)
-        .with({ type: "Failure", error: P.select() }, (error: Error) => {
+        .with({ type: "Failure", error: P.select() }, (error) => {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: error.message,
@@ -102,9 +102,8 @@ export const workOrderRouter = router({
       );
       return match(result)
         .with({ type: "Success" }, ({ value }) => value)
-        .with({ type: "Failure", error: P.select() }, (error: Error) => {
-          const errorMessage = error.message.toLowerCase();
-          if (errorMessage.includes("not found")) {
+        .with({ type: "Failure", error: P.select() }, (error) => {
+          if (error instanceof NotFoundError) {
             throw new TRPCError({
               code: "NOT_FOUND",
               message: error.message,
@@ -124,9 +123,8 @@ export const workOrderRouter = router({
       const result = await deleteWorkOrder(input.id, ctx.activeOrganizationId);
       match(result)
         .with({ type: "Success" }, () => {})
-        .with({ type: "Failure", error: P.select() }, (error: Error) => {
-          const errorMessage = error.message.toLowerCase();
-          if (errorMessage.includes("not found")) {
+        .with({ type: "Failure", error: P.select() }, (error) => {
+          if (error instanceof NotFoundError) {
             throw new TRPCError({
               code: "NOT_FOUND",
               message: error.message,

@@ -1,4 +1,5 @@
 import { vehicleFormSchema } from "@/lib/db/schemas";
+import { NotFoundError } from "@/lib/errors";
 import {
   createVehicle,
   deleteVehicle,
@@ -35,7 +36,7 @@ export const vehicleRouter = router({
       const result = await getVehicles(ctx.activeOrganizationId, filters);
       return match(result)
         .with({ type: "Success" }, (r) => r.value)
-        .with({ type: "Failure", error: P.select() }, (error: Error) => {
+        .with({ type: "Failure", error: P.select() }, (error) => {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: error.message,
@@ -50,9 +51,8 @@ export const vehicleRouter = router({
       const result = await getVehicleById(input.id, ctx.activeOrganizationId);
       return match(result)
         .with({ type: "Success" }, (r) => r.value)
-        .with({ type: "Failure", error: P.select() }, (error: Error) => {
-          const errorMessage = error.message.toLowerCase();
-          if (errorMessage.includes("not found")) {
+        .with({ type: "Failure", error: P.select() }, (error) => {
+          if (error instanceof NotFoundError) {
             throw new TRPCError({
               code: "NOT_FOUND",
               message: error.message,
@@ -82,7 +82,7 @@ export const vehicleRouter = router({
       );
       return match(result)
         .with({ type: "Success" }, (r) => r.value)
-        .with({ type: "Failure", error: P.select() }, (error: Error) => {
+        .with({ type: "Failure", error: P.select() }, (error) => {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: error.message,
@@ -115,9 +115,8 @@ export const vehicleRouter = router({
       );
       return match(result)
         .with({ type: "Success" }, (r) => r.value)
-        .with({ type: "Failure", error: P.select() }, (error: Error) => {
-          const errorMessage = error.message.toLowerCase();
-          if (errorMessage.includes("not found")) {
+        .with({ type: "Failure", error: P.select() }, (error) => {
+          if (error instanceof NotFoundError) {
             throw new TRPCError({
               code: "NOT_FOUND",
               message: error.message,
@@ -137,9 +136,8 @@ export const vehicleRouter = router({
       const result = await deleteVehicle(input.id, ctx.activeOrganizationId);
       match(result)
         .with({ type: "Success" }, () => {})
-        .with({ type: "Failure", error: P.select() }, (error: Error) => {
-          const errorMessage = error.message.toLowerCase();
-          if (errorMessage.includes("not found")) {
+        .with({ type: "Failure", error: P.select() }, (error) => {
+          if (error instanceof NotFoundError) {
             throw new TRPCError({
               code: "NOT_FOUND",
               message: error.message,
