@@ -3,7 +3,7 @@ import { member, session } from "@/lib/db/auth-schema";
 import { BaseError, isBaseError } from "@/lib/errors";
 import { serviceTracer } from "@/lib/tracer";
 import { SpanStatusCode } from "@opentelemetry/api";
-import { Result } from "@praha/byethrow";
+import { Result } from "neverthrow";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
@@ -173,39 +173,41 @@ function getErrorStatus(error: unknown): number {
 }
 
 /**
- * Helper function to convert a byethrow Result to a NextResponse
+ * Helper function to convert a neverthrow Result to a NextResponse
  */
 export function resultToResponse<T>(
-  result: Result.ResultMaybeAsync<T, BaseError | Error>,
+  result: Result<T, BaseError | Error> | Promise<Result<T, BaseError | Error>>,
   successStatus: number = 200
 ): NextResponse | Promise<NextResponse> {
   // Handle async results
   if (result instanceof Promise) {
     return result.then((resolvedResult) => {
-      if (Result.isFailure(resolvedResult)) {
-        console.error("Error:", resolvedResult.error);
-        const status = getErrorStatus(resolvedResult.error);
+      if (resolvedResult.isErr()) {
+        const error = resolvedResult._unsafeUnwrapErr();
+        console.error("Error:", error);
+        const status = getErrorStatus(error);
         return NextResponse.json(
-          { error: resolvedResult.error.message || "Internal server error" },
+          { error: error.message || "Internal server error" },
           { status }
         );
       }
       return NextResponse.json(
-        { data: resolvedResult.value },
+        { data: resolvedResult._unsafeUnwrap() },
         { status: successStatus }
       );
     });
   }
 
   // Handle sync results
-  if (Result.isFailure(result)) {
-    console.error("Error:", result.error);
-    const status = getErrorStatus(result.error);
+  if (result.isErr()) {
+    const error = result._unsafeUnwrapErr();
+    console.error("Error:", error);
+    const status = getErrorStatus(error);
     return NextResponse.json(
-      { error: result.error.message || "Internal server error" },
+      { error: error.message || "Internal server error" },
       { status }
     );
   }
 
-  return NextResponse.json({ data: result.value }, { status: successStatus });
+  return NextResponse.json({ data: result._unsafeUnwrap() }, { status: successStatus });
 }

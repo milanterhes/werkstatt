@@ -4,7 +4,7 @@ import type { Customer, CustomerInput } from "@/lib/db/schemas";
 import { BaseError, DatabaseError, NotFoundError } from "@/lib/errors";
 import { serviceTracer } from "@/lib/tracer";
 import { SpanStatusCode } from "@opentelemetry/api";
-import { Result } from "@praha/byethrow";
+import { ok, err, Result } from "neverthrow";
 import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
@@ -27,7 +27,7 @@ export type { CustomerInput };
  */
 export async function getCustomers(
   organizationId: string
-): Promise<Result.Result<Customer[], BaseError>> {
+): Promise<Result<Customer[], BaseError>> {
   return await serviceTracer.startActiveSpan(
     "customer.getCustomers",
     {
@@ -45,7 +45,7 @@ export async function getCustomers(
           .where(eq(customers.organizationId, organizationId));
 
         span.setAttribute("result.count", result.length);
-        return Result.succeed(result);
+        return ok(result);
       } catch (error) {
         span.setStatus({
           code: SpanStatusCode.ERROR,
@@ -54,7 +54,7 @@ export async function getCustomers(
         span.recordException(
           error instanceof Error ? error : new Error(String(error))
         );
-        return Result.fail(
+        return err(
           new DatabaseError({
             customMessage: "Failed to fetch customers",
             code: "DATABASE_ERROR",
@@ -88,7 +88,7 @@ export async function getCustomers(
 export async function getCustomerById(
   id: string,
   organizationId: string
-): Promise<Result.Result<Customer, BaseError>> {
+): Promise<Result<Customer, BaseError>> {
   return await serviceTracer.startActiveSpan(
     "customer.getCustomerById",
     {
@@ -117,7 +117,7 @@ export async function getCustomerById(
             code: SpanStatusCode.ERROR,
             message: "Customer not found",
           });
-          return Result.fail(
+          return err(
             new NotFoundError({
               customMessage: "Customer not found",
               code: "NOT_FOUND",
@@ -127,7 +127,7 @@ export async function getCustomerById(
           );
         }
 
-        return Result.succeed(result[0]);
+        return ok(result[0]);
       } catch (error) {
         span.setStatus({
           code: SpanStatusCode.ERROR,
@@ -136,7 +136,7 @@ export async function getCustomerById(
         span.recordException(
           error instanceof Error ? error : new Error(String(error))
         );
-        return Result.fail(
+        return err(
           new DatabaseError({
             customMessage: "Failed to fetch customer",
             code: "DATABASE_ERROR",
@@ -178,7 +178,7 @@ export async function createCustomer(
     "id" | "organizationId" | "createdAt" | "updatedAt"
   >,
   organizationId: string
-): Promise<Result.Result<Customer, BaseError>> {
+): Promise<Result<Customer, BaseError>> {
   return await serviceTracer.startActiveSpan(
     "customer.createCustomer",
     {
@@ -208,7 +208,7 @@ export async function createCustomer(
           .returning();
 
         span.setAttribute("entity.id", result[0].id);
-        return Result.succeed(result[0]);
+        return ok(result[0]);
       } catch (error) {
         span.setStatus({
           code: SpanStatusCode.ERROR,
@@ -217,7 +217,7 @@ export async function createCustomer(
         span.recordException(
           error instanceof Error ? error : new Error(String(error))
         );
-        return Result.fail(
+        return err(
           new DatabaseError({
             customMessage: "Failed to create customer",
             code: "DATABASE_ERROR",
@@ -261,7 +261,7 @@ export async function updateCustomer(
     Omit<CustomerInput, "id" | "organizationId" | "createdAt" | "updatedAt">
   >,
   organizationId: string
-): Promise<Result.Result<Customer, BaseError>> {
+): Promise<Result<Customer, BaseError>> {
   return await serviceTracer.startActiveSpan(
     "customer.updateCustomer",
     {
@@ -301,7 +301,7 @@ export async function updateCustomer(
             code: SpanStatusCode.ERROR,
             message: "Customer not found",
           });
-          return Result.fail(
+          return err(
             new NotFoundError({
               customMessage: "Customer not found",
               code: "NOT_FOUND",
@@ -311,7 +311,7 @@ export async function updateCustomer(
           );
         }
 
-        return Result.succeed(result[0]);
+        return ok(result[0]);
       } catch (error) {
         span.setStatus({
           code: SpanStatusCode.ERROR,
@@ -320,7 +320,7 @@ export async function updateCustomer(
         span.recordException(
           error instanceof Error ? error : new Error(String(error))
         );
-        return Result.fail(
+        return err(
           new DatabaseError({
             customMessage: "Failed to update customer",
             code: "DATABASE_ERROR",
@@ -359,7 +359,7 @@ export async function updateCustomer(
 export async function deleteCustomer(
   id: string,
   organizationId: string
-): Promise<Result.Result<void, BaseError>> {
+): Promise<Result<void, BaseError>> {
   return await serviceTracer.startActiveSpan(
     "customer.deleteCustomer",
     {
@@ -387,7 +387,7 @@ export async function deleteCustomer(
             code: SpanStatusCode.ERROR,
             message: "Customer not found",
           });
-          return Result.fail(
+          return err(
             new NotFoundError({
               customMessage: "Customer not found",
               code: "NOT_FOUND",
@@ -397,7 +397,7 @@ export async function deleteCustomer(
           );
         }
 
-        return Result.succeed(undefined);
+        return ok(undefined);
       } catch (error) {
         span.setStatus({
           code: SpanStatusCode.ERROR,
@@ -406,7 +406,7 @@ export async function deleteCustomer(
         span.recordException(
           error instanceof Error ? error : new Error(String(error))
         );
-        return Result.fail(
+        return err(
           new DatabaseError({
             customMessage: "Failed to delete customer",
             code: "DATABASE_ERROR",

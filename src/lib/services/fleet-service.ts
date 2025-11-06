@@ -3,7 +3,7 @@ import { fleets } from "@/lib/db/customer-schema";
 import type { Fleet, FleetInput } from "@/lib/db/schemas";
 import { BaseError, DatabaseError, NotFoundError } from "@/lib/errors";
 import { serviceTracer } from "@/lib/tracer";
-import { Result } from "@praha/byethrow";
+import { ok, err, Result } from "neverthrow";
 import { SpanStatusCode } from "@opentelemetry/api";
 import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
@@ -18,7 +18,7 @@ export type { FleetInput };
  */
 export async function getFleets(
   organizationId: string
-): Promise<Result.Result<Fleet[], BaseError>> {
+): Promise<Result<Fleet[], BaseError>> {
   return await serviceTracer.startActiveSpan(
     "fleet.getFleets",
     {
@@ -36,14 +36,14 @@ export async function getFleets(
           .where(eq(fleets.organizationId, organizationId));
 
         span.setAttribute("result.count", result.length);
-        return Result.succeed(result);
+        return ok(result);
       } catch (error) {
         span.setStatus({
           code: SpanStatusCode.ERROR,
           message: "Failed to fetch fleets",
         });
         span.recordException(error instanceof Error ? error : new Error(String(error)));
-        return Result.fail(
+        return err(
           new DatabaseError({
             customMessage: "Failed to fetch fleets",
             code: "DATABASE_ERROR",
@@ -68,7 +68,7 @@ export async function getFleets(
 export async function getFleetById(
   id: string,
   organizationId: string
-): Promise<Result.Result<Fleet, BaseError>> {
+): Promise<Result<Fleet, BaseError>> {
   return await serviceTracer.startActiveSpan(
     "fleet.getFleetById",
     {
@@ -92,7 +92,7 @@ export async function getFleetById(
             code: SpanStatusCode.ERROR,
             message: "Fleet not found",
           });
-          return Result.fail(
+          return err(
             new NotFoundError({
               customMessage: "Fleet not found",
               code: "NOT_FOUND",
@@ -102,14 +102,14 @@ export async function getFleetById(
           );
         }
 
-        return Result.succeed(result[0]);
+        return ok(result[0]);
       } catch (error) {
         span.setStatus({
           code: SpanStatusCode.ERROR,
           message: "Failed to fetch fleet",
         });
         span.recordException(error instanceof Error ? error : new Error(String(error)));
-        return Result.fail(
+        return err(
           new DatabaseError({
             customMessage: "Failed to fetch fleet",
             code: "DATABASE_ERROR",
@@ -135,7 +135,7 @@ export async function getFleetById(
 export async function createFleet(
   data: Omit<FleetInput, "id" | "organizationId" | "createdAt" | "updatedAt">,
   organizationId: string
-): Promise<Result.Result<Fleet, BaseError>> {
+): Promise<Result<Fleet, BaseError>> {
   return await serviceTracer.startActiveSpan(
     "fleet.createFleet",
     {
@@ -165,14 +165,14 @@ export async function createFleet(
           .returning();
 
         span.setAttribute("entity.id", result[0].id);
-        return Result.succeed(result[0]);
+        return ok(result[0]);
       } catch (error) {
         span.setStatus({
           code: SpanStatusCode.ERROR,
           message: "Failed to create fleet",
         });
         span.recordException(error instanceof Error ? error : new Error(String(error)));
-        return Result.fail(
+        return err(
           new DatabaseError({
             customMessage: "Failed to create fleet",
             code: "DATABASE_ERROR",
@@ -202,7 +202,7 @@ export async function updateFleet(
     Omit<FleetInput, "id" | "organizationId" | "createdAt" | "updatedAt">
   >,
   organizationId: string
-): Promise<Result.Result<Fleet, BaseError>> {
+): Promise<Result<Fleet, BaseError>> {
   return await serviceTracer.startActiveSpan(
     "fleet.updateFleet",
     {
@@ -237,7 +237,7 @@ export async function updateFleet(
             code: SpanStatusCode.ERROR,
             message: "Fleet not found",
           });
-          return Result.fail(
+          return err(
             new NotFoundError({
               customMessage: "Fleet not found",
               code: "NOT_FOUND",
@@ -247,14 +247,14 @@ export async function updateFleet(
           );
         }
 
-        return Result.succeed(result[0]);
+        return ok(result[0]);
       } catch (error) {
         span.setStatus({
           code: SpanStatusCode.ERROR,
           message: "Failed to update fleet",
         });
         span.recordException(error instanceof Error ? error : new Error(String(error)));
-        return Result.fail(
+        return err(
           new DatabaseError({
             customMessage: "Failed to update fleet",
             code: "DATABASE_ERROR",
@@ -280,7 +280,7 @@ export async function updateFleet(
 export async function deleteFleet(
   id: string,
   organizationId: string
-): Promise<Result.Result<void, BaseError>> {
+): Promise<Result<void, BaseError>> {
   return await serviceTracer.startActiveSpan(
     "fleet.deleteFleet",
     {
@@ -303,7 +303,7 @@ export async function deleteFleet(
             code: SpanStatusCode.ERROR,
             message: "Fleet not found",
           });
-          return Result.fail(
+          return err(
             new NotFoundError({
               customMessage: "Fleet not found",
               code: "NOT_FOUND",
@@ -313,14 +313,14 @@ export async function deleteFleet(
           );
         }
 
-        return Result.succeed(undefined);
+        return ok(undefined);
       } catch (error) {
         span.setStatus({
           code: SpanStatusCode.ERROR,
           message: "Failed to delete fleet",
         });
         span.recordException(error instanceof Error ? error : new Error(String(error)));
-        return Result.fail(
+        return err(
           new DatabaseError({
             customMessage: "Failed to delete fleet",
             code: "DATABASE_ERROR",

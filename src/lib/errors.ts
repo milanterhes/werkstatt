@@ -1,9 +1,9 @@
 /**
- * Custom error classes for structured error handling with byethrow Result types.
+ * Custom error classes for structured error handling with neverthrow Result types.
  * These errors provide better type safety, error categorization, and metadata
  * for observability tools like OpenTelemetry.
  *
- * Uses @praha/error-factory for consistent error structure as recommended by byethrow.
+ * Uses @praha/error-factory for consistent error structure.
  */
 
 import { ErrorFactory } from "@praha/error-factory";

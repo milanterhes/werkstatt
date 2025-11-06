@@ -7,7 +7,7 @@ import type {
 import { workOrders } from "@/lib/db/work-order-schema";
 import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { Result } from "@praha/byethrow";
+import { ok, err, Result } from "neverthrow";
 import { BaseError, DatabaseError, NotFoundError } from "@/lib/errors";
 import { serviceTracer } from "@/lib/tracer";
 import { SpanStatusCode } from "@opentelemetry/api";
@@ -22,7 +22,7 @@ export type { WorkOrderInput };
  */
 export async function getWorkOrders(
   organizationId: string
-): Promise<Result.Result<WorkOrder[], BaseError>> {
+): Promise<Result<WorkOrder[], BaseError>> {
   return await serviceTracer.startActiveSpan(
     "workOrder.getWorkOrders",
     {
@@ -40,14 +40,14 @@ export async function getWorkOrders(
           .where(eq(workOrders.organizationId, organizationId));
 
         span.setAttribute("result.count", result.length);
-        return Result.succeed(result);
+        return ok(result);
       } catch (error) {
         span.setStatus({
           code: SpanStatusCode.ERROR,
           message: "Failed to fetch work orders",
         });
         span.recordException(error instanceof Error ? error : new Error(String(error)));
-        return Result.fail(
+        return err(
           new DatabaseError({
             customMessage: "Failed to fetch work orders",
             code: "DATABASE_ERROR",
@@ -72,7 +72,7 @@ export async function getWorkOrders(
 export async function getWorkOrderById(
   id: string,
   organizationId: string
-): Promise<Result.Result<WorkOrder, BaseError>> {
+): Promise<Result<WorkOrder, BaseError>> {
   return await serviceTracer.startActiveSpan(
     "workOrder.getWorkOrderById",
     {
@@ -101,7 +101,7 @@ export async function getWorkOrderById(
             code: SpanStatusCode.ERROR,
             message: "Work order not found",
           });
-          return Result.fail(
+          return err(
             new NotFoundError({
               customMessage: "Work order not found",
               code: "NOT_FOUND",
@@ -111,14 +111,14 @@ export async function getWorkOrderById(
           );
         }
 
-        return Result.succeed(result[0]);
+        return ok(result[0]);
       } catch (error) {
         span.setStatus({
           code: SpanStatusCode.ERROR,
           message: "Failed to fetch work order",
         });
         span.recordException(error instanceof Error ? error : new Error(String(error)));
-        return Result.fail(
+        return err(
           new DatabaseError({
             customMessage: "Failed to fetch work order",
             code: "DATABASE_ERROR",
@@ -157,7 +157,7 @@ export async function createWorkOrder(
     completedDate?: Date | string | null;
   },
   organizationId: string
-): Promise<Result.Result<WorkOrder, BaseError>> {
+): Promise<Result<WorkOrder, BaseError>> {
   return await serviceTracer.startActiveSpan(
     "workOrder.createWorkOrder",
     {
@@ -199,14 +199,14 @@ export async function createWorkOrder(
           .returning();
 
         span.setAttribute("entity.id", result[0].id);
-        return Result.succeed(result[0]);
+        return ok(result[0]);
       } catch (error) {
         span.setStatus({
           code: SpanStatusCode.ERROR,
           message: "Failed to create work order",
         });
         span.recordException(error instanceof Error ? error : new Error(String(error)));
-        return Result.fail(
+        return err(
           new DatabaseError({
             customMessage: "Failed to create work order",
             code: "DATABASE_ERROR",
@@ -249,7 +249,7 @@ export async function updateWorkOrder(
     completedDate?: Date | string | null;
   },
   organizationId: string
-): Promise<Result.Result<WorkOrder, BaseError>> {
+): Promise<Result<WorkOrder, BaseError>> {
   return await serviceTracer.startActiveSpan(
     "workOrder.updateWorkOrder",
     {
@@ -301,7 +301,7 @@ export async function updateWorkOrder(
             code: SpanStatusCode.ERROR,
             message: "Work order not found",
           });
-          return Result.fail(
+          return err(
             new NotFoundError({
               customMessage: "Work order not found",
               code: "NOT_FOUND",
@@ -311,14 +311,14 @@ export async function updateWorkOrder(
           );
         }
 
-        return Result.succeed(result[0]);
+        return ok(result[0]);
       } catch (error) {
         span.setStatus({
           code: SpanStatusCode.ERROR,
           message: "Failed to update work order",
         });
         span.recordException(error instanceof Error ? error : new Error(String(error)));
-        return Result.fail(
+        return err(
           new DatabaseError({
             customMessage: "Failed to update work order",
             code: "DATABASE_ERROR",
@@ -348,7 +348,7 @@ export async function updateWorkOrder(
 export async function deleteWorkOrder(
   id: string,
   organizationId: string
-): Promise<Result.Result<void, BaseError>> {
+): Promise<Result<void, BaseError>> {
   return await serviceTracer.startActiveSpan(
     "workOrder.deleteWorkOrder",
     {
@@ -376,7 +376,7 @@ export async function deleteWorkOrder(
             code: SpanStatusCode.ERROR,
             message: "Work order not found",
           });
-          return Result.fail(
+          return err(
             new NotFoundError({
               customMessage: "Work order not found",
               code: "NOT_FOUND",
@@ -386,14 +386,14 @@ export async function deleteWorkOrder(
           );
         }
 
-        return Result.succeed(undefined);
+        return ok(undefined);
       } catch (error) {
         span.setStatus({
           code: SpanStatusCode.ERROR,
           message: "Failed to delete work order",
         });
         span.recordException(error instanceof Error ? error : new Error(String(error)));
-        return Result.fail(
+        return err(
           new DatabaseError({
             customMessage: "Failed to delete work order",
             code: "DATABASE_ERROR",
