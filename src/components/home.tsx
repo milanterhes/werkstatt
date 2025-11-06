@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { CreateOrganizationForm } from "./create-organization-form";
 import { OnboardingFlow } from "./onboarding-flow";
 import { Button } from "./ui/button";
-import { Spinner } from "./ui/spinner";
+import { Skeleton } from "./ui/skeleton";
 
 const Home = () => {
   const session = authClient.useSession();
@@ -14,12 +14,10 @@ const Home = () => {
   const router = useRouter();
 
   // Check if workshop details exist
-  const { data: workshopDetails } = trpc.workshop.getDetails.useQuery(
-    undefined,
-    {
+  const { data: workshopDetails, isLoading: isLoadingWorkshopDetails } =
+    trpc.workshop.getDetails.useQuery(undefined, {
       enabled: !!activeOrganization.data?.id,
-    }
-  );
+    });
 
   async function handleSignOut() {
     const result = await authClient.signOut();
@@ -29,19 +27,17 @@ const Home = () => {
     router.push("/sign-in?tab=signin");
   }
 
-  // Show loading state while checking organizations
-  if (organizations.isPending) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Spinner />
-      </div>
-    );
-  }
+  // Determine loading states
+  const isLoadingOrganizations = organizations.isPending;
+  const isLoadingSession = session.isPending;
+  const isLoadingActiveOrg = activeOrganization.isPending;
+  const isLoadingHeader =
+    isLoadingSession || isLoadingOrganizations || isLoadingActiveOrg;
 
   // Show organization creation form if user has no organizations
-  if (!organizations.data || organizations.data.length === 0) {
-    return <CreateOrganizationForm />;
-  }
+  const hasNoOrganizations =
+    !isLoadingOrganizations &&
+    (!organizations.data || organizations.data.length === 0);
 
   // Show onboarding flow if organization exists but no workshop details yet
   // or if workshop details are incomplete
@@ -56,94 +52,113 @@ const Home = () => {
   const hasBank = !!(workshopDetails?.iban && workshopDetails?.bic);
 
   const shouldShowOnboarding =
-    !hasWorkshopDetails || !hasAddress || !hasContact || !hasBank;
+    !isLoadingWorkshopDetails &&
+    !hasNoOrganizations &&
+    (!hasWorkshopDetails || !hasAddress || !hasContact || !hasBank);
 
-  if (shouldShowOnboarding) {
-    return (
-      <div className="container mx-auto py-8 max-w-4xl">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">
-              Welcome, {session.data?.user.name}
-            </h1>
-            <p className="text-muted-foreground">
-              {activeOrganization.data?.name}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => router.push("/settings")} variant="outline">
-              Settings
-            </Button>
-            <Button onClick={handleSignOut} variant="outline">
-              Sign out
-            </Button>
-          </div>
-        </div>
-        <OnboardingFlow />
-      </div>
-    );
-  }
+  const shouldShowDashboard =
+    !isLoadingWorkshopDetails &&
+    !hasNoOrganizations &&
+    hasWorkshopDetails &&
+    hasAddress &&
+    hasContact &&
+    hasBank;
 
-  // Show regular home content if workshop details are complete
   return (
     <div className="container mx-auto py-8 max-w-4xl">
+      {/* Header Section */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold">
-            Welcome, {session.data?.user.name}
-          </h1>
-          <p className="text-muted-foreground">
-            {activeOrganization.data?.name}
-          </p>
+          {isLoadingHeader ? (
+            <>
+              <Skeleton className="h-8 w-64 mb-2" />
+              <Skeleton className="h-5 w-48" />
+            </>
+          ) : (
+            <>
+              <h1 className="text-2xl font-bold">
+                Welcome, {session.data?.user.name}
+              </h1>
+              <p className="text-muted-foreground">
+                {activeOrganization.data?.name}
+              </p>
+            </>
+          )}
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => router.push("/settings")} variant="outline">
-            Settings
-          </Button>
-          <Button onClick={handleSignOut} variant="outline">
-            Sign out
-          </Button>
+          {isLoadingHeader ? (
+            <>
+              <Skeleton className="h-10 w-24" />
+              <Skeleton className="h-10 w-24" />
+            </>
+          ) : (
+            <>
+              <Button
+                onClick={() => router.push("/settings")}
+                variant="outline"
+              >
+                Settings
+              </Button>
+              <Button onClick={handleSignOut} variant="outline">
+                Sign out
+              </Button>
+            </>
+          )}
         </div>
       </div>
-      <div className="rounded-lg border p-6">
-        <h2 className="text-lg font-semibold mb-4">Workshop Dashboard</h2>
-        <p className="text-muted-foreground mb-6">
-          Your workshop setup is complete. You can now use all features of the
-          platform.
-        </p>
-        <div className="grid gap-4 md:grid-cols-3">
-          <Button
-            onClick={() => router.push("/customers")}
-            variant="outline"
-            className="h-auto flex-col items-start py-4"
-          >
-            <span className="font-semibold">Customers</span>
-            <span className="text-sm text-muted-foreground">
-              Manage customer contacts
-            </span>
-          </Button>
-          <Button
-            onClick={() => router.push("/vehicles")}
-            variant="outline"
-            className="h-auto flex-col items-start py-4"
-          >
-            <span className="font-semibold">Vehicles</span>
-            <span className="text-sm text-muted-foreground">
-              Track vehicle information
-            </span>
-          </Button>
-          <Button
-            onClick={() => router.push("/fleets")}
-            variant="outline"
-            className="h-auto flex-col items-start py-4"
-          >
-            <span className="font-semibold">Fleets</span>
-            <span className="text-sm text-muted-foreground">
-              Manage vehicle fleets
-            </span>
-          </Button>
+
+      {/* Main Content Area */}
+      {hasNoOrganizations ? (
+        <CreateOrganizationForm />
+      ) : isLoadingWorkshopDetails ? (
+        <div className="rounded-lg border p-6">
+          <Skeleton className="h-6 w-48 mb-4" />
+          <Skeleton className="h-4 w-full mb-6" />
+          <div className="grid gap-4 md:grid-cols-3">
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </div>
         </div>
-      </div>
+      ) : shouldShowOnboarding ? (
+        <OnboardingFlow />
+      ) : shouldShowDashboard ? (
+        <div className="rounded-lg border p-6">
+          <h2 className="text-lg font-semibold mb-4">Workshop Dashboard</h2>
+          <div className="grid gap-4 md:grid-cols-3">
+            <Button
+              onClick={() => router.push("/customers")}
+              variant="outline"
+              className="h-auto flex-col items-start py-4"
+            >
+              <span className="font-semibold">Customers</span>
+              <span className="text-sm text-muted-foreground">
+                Manage customer contacts
+              </span>
+            </Button>
+            <Button
+              onClick={() => router.push("/vehicles")}
+              variant="outline"
+              className="h-auto flex-col items-start py-4"
+            >
+              <span className="font-semibold">Vehicles</span>
+              <span className="text-sm text-muted-foreground">
+                Track vehicle information
+              </span>
+            </Button>
+            <Button
+              onClick={() => router.push("/fleets")}
+              variant="outline"
+              className="h-auto flex-col items-start py-4"
+            >
+              <span className="font-semibold">Fleets</span>
+              <span className="text-sm text-muted-foreground">
+                Manage vehicle fleets
+              </span>
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };
