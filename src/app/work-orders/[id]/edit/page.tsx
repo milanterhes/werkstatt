@@ -28,7 +28,7 @@ export default function EditWorkOrderPage() {
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Work Order Not Found</h1>
           <p className="text-muted-foreground">
-            The work order you're looking for doesn't exist.
+            The work order you&apos;re looking for doesn&apos;t exist.
           </p>
         </div>
       </div>

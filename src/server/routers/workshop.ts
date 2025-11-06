@@ -1,10 +1,10 @@
-import { protectedProcedure, router } from "../trpc/trpc";
-import { TRPCError } from "@trpc/server";
 import db from "@/lib/db";
+import { workshopDetailsFormSchema } from "@/lib/db/schemas";
 import { workshopDetails } from "@/lib/db/workshop-schema";
+import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { workshopDetailsFormSchema } from "@/lib/db/schemas";
+import { protectedProcedure, router } from "../trpc/trpc";
 
 export const workshopRouter = router({
   getDetails: protectedProcedure.query(async ({ ctx }) => {
@@ -23,7 +23,10 @@ export const workshopRouter = router({
     } catch (error) {
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
-        message: error instanceof Error ? error.message : "Failed to fetch workshop details",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Failed to fetch workshop details",
       });
     }
   }),
@@ -75,9 +78,11 @@ export const workshopRouter = router({
       } catch (error) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: error instanceof Error ? error.message : "Failed to update workshop details",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to update workshop details",
         });
       }
     }),
 });
-

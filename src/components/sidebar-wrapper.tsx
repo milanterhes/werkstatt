@@ -29,4 +29,3 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
-

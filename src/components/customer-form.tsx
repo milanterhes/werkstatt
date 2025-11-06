@@ -25,7 +25,7 @@ import { trpc } from "@/lib/trpc";
 interface CustomerFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  initialData?: CustomerFormInput & { id?: string } | null;
+  initialData?: (CustomerFormInput & { id?: string }) | null;
 }
 
 export function CustomerForm({
@@ -120,17 +120,13 @@ export function CustomerForm({
               <Field>
                 <FieldLabel>Email</FieldLabel>
                 <Input type="email" {...form.register("email")} />
-                <FieldError>
-                  {form.formState.errors.email?.message}
-                </FieldError>
+                <FieldError>{form.formState.errors.email?.message}</FieldError>
               </Field>
 
               <Field>
                 <FieldLabel>Phone</FieldLabel>
                 <Input type="tel" {...form.register("phone")} />
-                <FieldError>
-                  {form.formState.errors.phone?.message}
-                </FieldError>
+                <FieldError>{form.formState.errors.phone?.message}</FieldError>
               </Field>
 
               <Field>
@@ -144,9 +140,7 @@ export function CustomerForm({
               <Field>
                 <FieldLabel>Street</FieldLabel>
                 <Input {...form.register("street")} />
-                <FieldError>
-                  {form.formState.errors.street?.message}
-                </FieldError>
+                <FieldError>{form.formState.errors.street?.message}</FieldError>
               </Field>
 
               <Field>
@@ -168,9 +162,7 @@ export function CustomerForm({
               <Field>
                 <FieldLabel>City</FieldLabel>
                 <Input {...form.register("city")} />
-                <FieldError>
-                  {form.formState.errors.city?.message}
-                </FieldError>
+                <FieldError>{form.formState.errors.city?.message}</FieldError>
               </Field>
             </div>
 
@@ -182,7 +174,10 @@ export function CustomerForm({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+              <Button
+                type="submit"
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
                 {createMutation.isPending || updateMutation.isPending ? (
                   <Spinner />
                 ) : isEditing ? (
@@ -198,5 +193,3 @@ export function CustomerForm({
     </Dialog>
   );
 }
-
-

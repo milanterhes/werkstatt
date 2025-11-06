@@ -104,8 +104,8 @@ export const vehicleRouter = router({
         registrationDate: input.data.registrationDate
           ? new Date(input.data.registrationDate)
           : input.data.registrationDate === null
-          ? null
-          : undefined,
+            ? null
+            : undefined,
       };
       const result = await updateVehicle(
         input.id,

@@ -99,7 +99,6 @@ export function FleetForm({ open, onOpenChange, initialData }: FleetFormProps) {
     }
   }
 
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -201,4 +200,3 @@ export function FleetForm({ open, onOpenChange, initialData }: FleetFormProps) {
     </Dialog>
   );
 }
-

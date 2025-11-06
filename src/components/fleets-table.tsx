@@ -80,7 +80,6 @@ export function FleetsTable() {
     setIsFormOpen(true);
   }
 
-
   const columns = useMemo<ColumnDef<Fleet>[]>(() => {
     const getCustomerName = (customerId: string | null | undefined) => {
       if (!customerId) return "-";

@@ -85,6 +85,7 @@ The application uses Better Auth with the organization plugin for multi-tenant s
 ### Context Creation
 
 The tRPC context (`src/server/trpc/context.ts`) ensures:
+
 - User is authenticated
 - Active organization is resolved
 - `userId`, `sessionId`, and `activeOrganizationId` are available in all procedures
@@ -128,6 +129,7 @@ export const customerRouter = router({
 ### Error Handling
 
 tRPC procedures convert Neverthrow Result types to tRPC errors:
+
 - `NOT_FOUND` (404) for "not found" errors
 - `INTERNAL_SERVER_ERROR` (500) for other errors
 - `UNAUTHORIZED` (401) handled in context creation
@@ -141,7 +143,7 @@ Services (`src/lib/services/*.ts`) contain business logic and use Neverthrow Res
 ```typescript
 export async function getCustomers(
   organizationId: string
-): Promise<Result<Customer[], Error>>
+): Promise<Result<Customer[], Error>>;
 ```
 
 ### Benefits
@@ -154,6 +156,7 @@ export async function getCustomers(
 ### Service Functions
 
 Each service typically provides:
+
 - `get*` - List/fetch operations
 - `get*ById` - Single item fetch
 - `create*` - Create operations
@@ -163,6 +166,7 @@ Each service typically provides:
 ### Data Cleaning
 
 Services clean form data:
+
 - Empty strings converted to `null` for optional fields
 - `organizationId` always injected from context
 - Timestamps managed automatically
@@ -203,6 +207,7 @@ Organization (Better Auth)
 ### Multi-tenancy
 
 All tables include `organizationId`:
+
 - Foreign key to `organization.id`
 - Cascade delete on organization removal
 - Filtered in all queries via context
@@ -319,11 +324,13 @@ Drizzle Schema → Zod Schema → Service Types → tRPC Types → Client Types
 ## Environment Variables
 
 Required variables:
+
 - `DATABASE_URL` - PostgreSQL connection string
 - `BETTER_AUTH_SECRET` - Auth secret key
 - `BETTER_AUTH_URL` - Application URL (for auth callbacks)
 
 Optional:
+
 - `PORT` - Server port (default: 3000)
 - `VERCEL_URL` - Vercel deployment URL
 
@@ -451,4 +458,3 @@ Work orders are fully implemented and include:
   - Track all changes
   - User activity logs
   - Compliance reporting
-

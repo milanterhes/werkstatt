@@ -42,7 +42,9 @@ export async function getFleets(
           code: SpanStatusCode.ERROR,
           message: "Failed to fetch fleets",
         });
-        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        span.recordException(
+          error instanceof Error ? error : new Error(String(error))
+        );
         return err(
           new DatabaseError({
             customMessage: "Failed to fetch fleets",
@@ -84,7 +86,9 @@ export async function getFleetById(
         const result = await db
           .select()
           .from(fleets)
-          .where(and(eq(fleets.id, id), eq(fleets.organizationId, organizationId)))
+          .where(
+            and(eq(fleets.id, id), eq(fleets.organizationId, organizationId))
+          )
           .limit(1);
 
         if (result.length === 0) {
@@ -108,7 +112,9 @@ export async function getFleetById(
           code: SpanStatusCode.ERROR,
           message: "Failed to fetch fleet",
         });
-        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        span.recordException(
+          error instanceof Error ? error : new Error(String(error))
+        );
         return err(
           new DatabaseError({
             customMessage: "Failed to fetch fleet",
@@ -171,7 +177,9 @@ export async function createFleet(
           code: SpanStatusCode.ERROR,
           message: "Failed to create fleet",
         });
-        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        span.recordException(
+          error instanceof Error ? error : new Error(String(error))
+        );
         return err(
           new DatabaseError({
             customMessage: "Failed to create fleet",
@@ -229,7 +237,9 @@ export async function updateFleet(
             ...cleanedData,
             updatedAt: new Date(),
           })
-          .where(and(eq(fleets.id, id), eq(fleets.organizationId, organizationId)))
+          .where(
+            and(eq(fleets.id, id), eq(fleets.organizationId, organizationId))
+          )
           .returning();
 
         if (result.length === 0) {
@@ -253,7 +263,9 @@ export async function updateFleet(
           code: SpanStatusCode.ERROR,
           message: "Failed to update fleet",
         });
-        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        span.recordException(
+          error instanceof Error ? error : new Error(String(error))
+        );
         return err(
           new DatabaseError({
             customMessage: "Failed to update fleet",
@@ -295,7 +307,9 @@ export async function deleteFleet(
       try {
         const result = await db
           .delete(fleets)
-          .where(and(eq(fleets.id, id), eq(fleets.organizationId, organizationId)))
+          .where(
+            and(eq(fleets.id, id), eq(fleets.organizationId, organizationId))
+          )
           .returning();
 
         if (result.length === 0) {
@@ -319,7 +333,9 @@ export async function deleteFleet(
           code: SpanStatusCode.ERROR,
           message: "Failed to delete fleet",
         });
-        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        span.recordException(
+          error instanceof Error ? error : new Error(String(error))
+        );
         return err(
           new DatabaseError({
             customMessage: "Failed to delete fleet",

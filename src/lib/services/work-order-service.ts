@@ -46,7 +46,9 @@ export async function getWorkOrders(
           code: SpanStatusCode.ERROR,
           message: "Failed to fetch work orders",
         });
-        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        span.recordException(
+          error instanceof Error ? error : new Error(String(error))
+        );
         return err(
           new DatabaseError({
             customMessage: "Failed to fetch work orders",
@@ -117,7 +119,9 @@ export async function getWorkOrderById(
           code: SpanStatusCode.ERROR,
           message: "Failed to fetch work order",
         });
-        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        span.recordException(
+          error instanceof Error ? error : new Error(String(error))
+        );
         return err(
           new DatabaseError({
             customMessage: "Failed to fetch work order",
@@ -205,7 +209,9 @@ export async function createWorkOrder(
           code: SpanStatusCode.ERROR,
           message: "Failed to create work order",
         });
-        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        span.recordException(
+          error instanceof Error ? error : new Error(String(error))
+        );
         return err(
           new DatabaseError({
             customMessage: "Failed to create work order",
@@ -317,7 +323,9 @@ export async function updateWorkOrder(
           code: SpanStatusCode.ERROR,
           message: "Failed to update work order",
         });
-        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        span.recordException(
+          error instanceof Error ? error : new Error(String(error))
+        );
         return err(
           new DatabaseError({
             customMessage: "Failed to update work order",
@@ -392,7 +400,9 @@ export async function deleteWorkOrder(
           code: SpanStatusCode.ERROR,
           message: "Failed to delete work order",
         });
-        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        span.recordException(
+          error instanceof Error ? error : new Error(String(error))
+        );
         return err(
           new DatabaseError({
             customMessage: "Failed to delete work order",

@@ -209,5 +209,8 @@ export function resultToResponse<T>(
     );
   }
 
-  return NextResponse.json({ data: result._unsafeUnwrap() }, { status: successStatus });
+  return NextResponse.json(
+    { data: result._unsafeUnwrap() },
+    { status: successStatus }
+  );
 }

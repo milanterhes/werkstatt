@@ -32,7 +32,7 @@ import { trpc } from "@/lib/trpc";
 interface VehicleFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  initialData?: VehicleFormInput & { id?: string } | null;
+  initialData?: (VehicleFormInput & { id?: string }) | null;
 }
 
 export function VehicleForm({
@@ -131,7 +131,6 @@ export function VehicleForm({
     }
   }
 
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -197,9 +196,7 @@ export function VehicleForm({
               <Field>
                 <FieldLabel>Color</FieldLabel>
                 <Input {...form.register("color")} />
-                <FieldError>
-                  {form.formState.errors.color?.message}
-                </FieldError>
+                <FieldError>{form.formState.errors.color?.message}</FieldError>
               </Field>
 
               <Field>
@@ -220,10 +217,7 @@ export function VehicleForm({
 
               <Field>
                 <FieldLabel>Registration Date</FieldLabel>
-                <Input
-                  type="date"
-                  {...form.register("registrationDate")}
-                />
+                <Input type="date" {...form.register("registrationDate")} />
                 <FieldError>
                   {form.formState.errors.registrationDate?.message}
                 </FieldError>
@@ -319,5 +313,3 @@ export function VehicleForm({
     </Dialog>
   );
 }
-
-

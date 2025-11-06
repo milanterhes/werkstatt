@@ -7,4 +7,3 @@ import { trace } from "@opentelemetry/api";
  * that automatically link to the parent Next.js request trace via AsyncLocalStorage.
  */
 export const serviceTracer = trace.getTracer("werkstatt-services");
-

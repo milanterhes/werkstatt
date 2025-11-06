@@ -95,7 +95,6 @@ export function VehiclesTable() {
     setIsFormOpen(true);
   }
 
-
   const columns = useMemo<ColumnDef<Vehicle>[]>(() => {
     const getCustomerName = (customerId: string | null | undefined) => {
       if (!customerId) return "-";

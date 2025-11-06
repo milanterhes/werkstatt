@@ -76,7 +76,9 @@ export async function getVehicles(
           code: SpanStatusCode.ERROR,
           message: "Failed to fetch vehicles",
         });
-        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        span.recordException(
+          error instanceof Error ? error : new Error(String(error))
+        );
         return err(
           new DatabaseError({
             customMessage: "Failed to fetch vehicles",
@@ -120,7 +122,10 @@ export async function getVehicleById(
           .select()
           .from(vehicles)
           .where(
-            and(eq(vehicles.id, id), eq(vehicles.organizationId, organizationId))
+            and(
+              eq(vehicles.id, id),
+              eq(vehicles.organizationId, organizationId)
+            )
           )
           .limit(1);
 
@@ -145,7 +150,9 @@ export async function getVehicleById(
           code: SpanStatusCode.ERROR,
           message: "Failed to fetch vehicle",
         });
-        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        span.recordException(
+          error instanceof Error ? error : new Error(String(error))
+        );
         return err(
           new DatabaseError({
             customMessage: "Failed to fetch vehicle",
@@ -213,7 +220,9 @@ export async function createVehicle(
           code: SpanStatusCode.ERROR,
           message: "Failed to create vehicle",
         });
-        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        span.recordException(
+          error instanceof Error ? error : new Error(String(error))
+        );
         return err(
           new DatabaseError({
             customMessage: "Failed to create vehicle",
@@ -272,7 +281,10 @@ export async function updateVehicle(
             updatedAt: new Date(),
           })
           .where(
-            and(eq(vehicles.id, id), eq(vehicles.organizationId, organizationId))
+            and(
+              eq(vehicles.id, id),
+              eq(vehicles.organizationId, organizationId)
+            )
           )
           .returning();
 
@@ -297,7 +309,9 @@ export async function updateVehicle(
           code: SpanStatusCode.ERROR,
           message: "Failed to update vehicle",
         });
-        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        span.recordException(
+          error instanceof Error ? error : new Error(String(error))
+        );
         return err(
           new DatabaseError({
             customMessage: "Failed to update vehicle",
@@ -340,7 +354,10 @@ export async function deleteVehicle(
         const result = await db
           .delete(vehicles)
           .where(
-            and(eq(vehicles.id, id), eq(vehicles.organizationId, organizationId))
+            and(
+              eq(vehicles.id, id),
+              eq(vehicles.organizationId, organizationId)
+            )
           )
           .returning();
 
@@ -365,7 +382,9 @@ export async function deleteVehicle(
           code: SpanStatusCode.ERROR,
           message: "Failed to delete vehicle",
         });
-        span.recordException(error instanceof Error ? error : new Error(String(error)));
+        span.recordException(
+          error instanceof Error ? error : new Error(String(error))
+        );
         return err(
           new DatabaseError({
             customMessage: "Failed to delete vehicle",

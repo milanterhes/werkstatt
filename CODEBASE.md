@@ -327,35 +327,29 @@ export const customerRouter = router({
 ### Adding a New Feature
 
 1. **Database Schema** (`src/lib/db/*-schema.ts`)
-
    - Define Drizzle table
    - Add relationships
    - Include `organizationId` and timestamps
 
 2. **Zod Schemas** (`src/lib/db/schemas.ts`)
-
    - Auto-generated via drizzle-zod
    - Add form schema variations
 
 3. **Service Layer** (`src/lib/services/*-service.ts`)
-
    - Create CRUD functions
    - Return Result types
    - Filter by organizationId
 
 4. **tRPC Router** (`src/server/routers/*.ts`)
-
    - Create router with procedures
    - Convert Result to tRPC errors
    - Use protectedProcedure
 
 5. **Add to Main Router** (`src/server/trpc/router.ts`)
-
    - Import router
    - Add to appRouter
 
 6. **Components** (`src/components/`)
-
    - Create form component
    - Create table component
    - Use tRPC hooks
