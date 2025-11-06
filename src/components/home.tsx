@@ -65,7 +65,7 @@ const Home = () => {
     hasBank;
 
   return (
-    <div className="container mx-auto py-8 max-w-4xl">
+    <div className="container mx-auto py-8 px-5">
       {/* Header Section */}
       <div className="flex justify-between items-center mb-6">
         <div>
@@ -123,42 +123,59 @@ const Home = () => {
       ) : shouldShowOnboarding ? (
         <OnboardingFlow />
       ) : shouldShowDashboard ? (
-        <div className="rounded-lg border p-6">
-          <h2 className="text-lg font-semibold mb-4">Workshop Dashboard</h2>
-          <div className="grid gap-4 md:grid-cols-3">
-            <Button
-              onClick={() => router.push("/customers")}
-              variant="outline"
-              className="h-auto flex-col items-start py-4"
-            >
-              <span className="font-semibold">Customers</span>
-              <span className="text-sm text-muted-foreground">
-                Manage customer contacts
-              </span>
-            </Button>
-            <Button
-              onClick={() => router.push("/vehicles")}
-              variant="outline"
-              className="h-auto flex-col items-start py-4"
-            >
-              <span className="font-semibold">Vehicles</span>
-              <span className="text-sm text-muted-foreground">
-                Track vehicle information
-              </span>
-            </Button>
-            <Button
-              onClick={() => router.push("/fleets")}
-              variant="outline"
-              className="h-auto flex-col items-start py-4"
-            >
-              <span className="font-semibold">Fleets</span>
-              <span className="text-sm text-muted-foreground">
-                Manage vehicle fleets
-              </span>
-            </Button>
-          </div>
-        </div>
+        <Dashboard />
       ) : null}
+    </div>
+  );
+};
+
+const Dashboard = () => {
+  const router = useRouter();
+  return (
+    <div className="rounded-lg border p-6">
+      <h2 className="text-lg font-semibold mb-4">Workshop Dashboard</h2>
+      <div className="grid gap-4 md:grid-cols-4">
+        <Button
+          onClick={() => router.push("/customers")}
+          variant="outline"
+          className="h-auto flex-col items-start py-4 min-w-0 wrap-break-word"
+        >
+          <span className="font-semibold wrap-break-word">Customers</span>
+          <span className="text-sm text-muted-foreground wrap-break-word text-wrap">
+            Manage customer contacts
+          </span>
+        </Button>
+        <Button
+          onClick={() => router.push("/vehicles")}
+          variant="outline"
+          className="h-auto flex-col items-start py-4 min-w-0 wrap-break-word"
+        >
+          <span className="font-semibold wrap-break-word">Vehicles</span>
+          <span className="text-sm text-muted-foreground wrap-break-word text-wrap">
+            Track vehicle information
+          </span>
+        </Button>
+        <Button
+          onClick={() => router.push("/fleets")}
+          variant="outline"
+          className="h-auto flex-col items-start py-4 min-w-0 wrap-break-word"
+        >
+          <span className="font-semibold wrap-break-word">Fleets</span>
+          <span className="text-sm text-muted-foreground wrap-break-word text-wrap">
+            Manage vehicle fleets
+          </span>
+        </Button>
+        <Button
+          onClick={() => router.push("/work-orders")}
+          variant="outline"
+          className="h-auto flex-col items-start py-4 min-w-0 wrap-break-word"
+        >
+          <span className="font-semibold wrap-break-word">Work Orders</span>
+          <span className="text-sm text-muted-foreground wrap-break-word text-wrap">
+            Manage work orders
+          </span>
+        </Button>
+      </div>
     </div>
   );
 };
