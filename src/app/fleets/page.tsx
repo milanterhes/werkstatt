@@ -1,4 +1,4 @@
-import { FleetsTable } from "@/components/fleets-table";
+import { FleetsTable } from "@/components/fleets/fleets-table";
 
 export default function FleetsPage() {
   return (

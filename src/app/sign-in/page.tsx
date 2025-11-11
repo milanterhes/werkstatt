@@ -1,6 +1,6 @@
 "use client";
-import { LoginForm } from "@/components/login-form";
-import { SignupForm } from "@/components/signup-form";
+import { LoginForm } from "@/components/auth/login-form";
+import { SignupForm } from "@/components/auth/signup-form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQueryState } from "nuqs";
 

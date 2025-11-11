@@ -20,8 +20,8 @@ import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import * as z from "zod";
-import { Button } from "./ui/button";
-import { Spinner } from "./ui/spinner";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 
 const loginSchema = z.object({
   email: z.email(),

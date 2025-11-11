@@ -1,6 +1,6 @@
 "use client";
 import { Spinner } from "@/components/ui/spinner";
-import { WorkOrderForm } from "@/components/work-order-form";
+import { WorkOrderForm } from "@/components/work-orders/work-order-form";
 import { trpc } from "@/lib/trpc";
 import { useParams } from "next/navigation";
 

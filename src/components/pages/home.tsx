@@ -2,14 +2,14 @@
 import { authClient } from "@/lib/auth-client";
 import { trpc } from "@/lib/trpc";
 import { useRouter } from "next/navigation";
-import { CreateOrganizationForm } from "./create-organization-form";
-import { DashboardStats } from "./dashboard-stats";
-import { OnboardingFlow } from "./onboarding-flow";
-import { RecentWorkOrders } from "./recent-work-orders";
-import { Button } from "./ui/button";
-import { Skeleton } from "./ui/skeleton";
-import { UpcomingDueDates } from "./upcoming-due-dates";
-import { WorkOrderStatusBreakdown } from "./work-order-status-breakdown";
+import { CreateOrganizationForm } from "@/components/workshop/create-organization-form";
+import { DashboardStats } from "@/components/dashboard/dashboard-stats";
+import { OnboardingFlow } from "@/components/auth/onboarding-flow";
+import { RecentWorkOrders } from "@/components/work-orders/recent-work-orders";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { UpcomingDueDates } from "@/components/dashboard/upcoming-due-dates";
+import { WorkOrderStatusBreakdown } from "@/components/work-orders/work-order-status-breakdown";
 
 const Home = () => {
   const session = authClient.useSession();

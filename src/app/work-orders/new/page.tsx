@@ -1,5 +1,5 @@
 "use client";
-import { WorkOrderForm } from "@/components/work-order-form";
+import { WorkOrderForm } from "@/components/work-orders/work-order-form";
 
 export default function NewWorkOrderPage() {
   return (

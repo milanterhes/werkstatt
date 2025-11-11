@@ -1,4 +1,4 @@
-import { VehiclesTable } from "@/components/vehicles-table";
+import { VehiclesTable } from "@/components/vehicles/vehicles-table";
 
 export default function VehiclesPage() {
   return (

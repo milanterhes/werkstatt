@@ -23,8 +23,8 @@ import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
-import { Button } from "./ui/button";
-import { Spinner } from "./ui/spinner";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 
 const organizationSchema = z.object({
   name: z.string().min(1, "Organization name is required"),

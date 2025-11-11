@@ -1,4 +1,4 @@
-import Home from "@/components/home";
+import Home from "@/components/pages/home";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";

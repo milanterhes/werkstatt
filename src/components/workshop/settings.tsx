@@ -1,7 +1,7 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { WorkshopDetailsForm } from "@/components/workshop-details-form";
+import { WorkshopDetailsForm } from "./workshop-details-form";
 import type { WorkshopDetailsFormInput } from "@/lib/db/schemas";
 import { trpc } from "@/lib/trpc";
 import { useRouter } from "next/navigation";

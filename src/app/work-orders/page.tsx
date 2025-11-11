@@ -1,4 +1,4 @@
-import { WorkOrdersTable } from "@/components/work-orders-table";
+import { WorkOrdersTable } from "@/components/work-orders/work-orders-table";
 
 export default function WorkOrdersPage() {
   return (
