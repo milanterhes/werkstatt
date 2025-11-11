@@ -3,9 +3,13 @@ import { authClient } from "@/lib/auth-client";
 import { trpc } from "@/lib/trpc";
 import { useRouter } from "next/navigation";
 import { CreateOrganizationForm } from "./create-organization-form";
+import { DashboardStats } from "./dashboard-stats";
 import { OnboardingFlow } from "./onboarding-flow";
+import { RecentWorkOrders } from "./recent-work-orders";
 import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
+import { UpcomingDueDates } from "./upcoming-due-dates";
+import { WorkOrderStatusBreakdown } from "./work-order-status-breakdown";
 
 const Home = () => {
   const session = authClient.useSession();
@@ -130,51 +134,17 @@ const Home = () => {
 };
 
 const Dashboard = () => {
-  const router = useRouter();
   return (
-    <div className="rounded-lg border p-6">
-      <h2 className="text-lg font-semibold mb-4">Workshop Dashboard</h2>
-      <div className="grid gap-4 md:grid-cols-4">
-        <Button
-          onClick={() => router.push("/customers")}
-          variant="outline"
-          className="h-auto flex-col items-start py-4 min-w-0 wrap-break-word"
-        >
-          <span className="font-semibold wrap-break-word">Customers</span>
-          <span className="text-sm text-muted-foreground wrap-break-word text-wrap">
-            Manage customer contacts
-          </span>
-        </Button>
-        <Button
-          onClick={() => router.push("/vehicles")}
-          variant="outline"
-          className="h-auto flex-col items-start py-4 min-w-0 wrap-break-word"
-        >
-          <span className="font-semibold wrap-break-word">Vehicles</span>
-          <span className="text-sm text-muted-foreground wrap-break-word text-wrap">
-            Track vehicle information
-          </span>
-        </Button>
-        <Button
-          onClick={() => router.push("/fleets")}
-          variant="outline"
-          className="h-auto flex-col items-start py-4 min-w-0 wrap-break-word"
-        >
-          <span className="font-semibold wrap-break-word">Fleets</span>
-          <span className="text-sm text-muted-foreground wrap-break-word text-wrap">
-            Manage vehicle fleets
-          </span>
-        </Button>
-        <Button
-          onClick={() => router.push("/work-orders")}
-          variant="outline"
-          className="h-auto flex-col items-start py-4 min-w-0 wrap-break-word"
-        >
-          <span className="font-semibold wrap-break-word">Work Orders</span>
-          <span className="text-sm text-muted-foreground wrap-break-word text-wrap">
-            Manage work orders
-          </span>
-        </Button>
+    <div className="space-y-6">
+      <div>
+        <DashboardStats />
+      </div>
+
+      <WorkOrderStatusBreakdown />
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <RecentWorkOrders />
+        <UpcomingDueDates />
       </div>
     </div>
   );
