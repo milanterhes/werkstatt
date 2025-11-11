@@ -1,23 +1,38 @@
 import db from "@/lib/db";
-import { fleets } from "@/lib/db/customer-schema";
+import { fleets, vehicles } from "@/lib/db/customer-schema";
 import type { Fleet, FleetInput } from "@/lib/db/schemas";
 import { BaseError, DatabaseError, NotFoundError } from "@/lib/errors";
 import { serviceTracer } from "@/lib/tracer";
-import { ok, err, Result } from "neverthrow";
 import { SpanStatusCode } from "@opentelemetry/api";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { err, ok, Result } from "neverthrow";
 
 export type { FleetInput };
 
 /**
- * Retrieves all fleets for a given organization.
+ * Filters for fleet queries.
+ */
+export interface FleetFilter {
+  column: string;
+  value: string;
+}
+
+export interface FleetFilters {
+  customerId?: string;
+  filters?: FleetFilter[];
+}
+
+/**
+ * Retrieves all fleets for a given organization, optionally filtered.
  *
  * @param organizationId - The ID of the organization to fetch fleets for
+ * @param filters - Optional filters to narrow down results
  * @returns A Result containing an array of fleets or an error
  */
 export async function getFleets(
-  organizationId: string
+  organizationId: string,
+  filters?: FleetFilters
 ): Promise<Result<Fleet[], BaseError>> {
   return await serviceTracer.startActiveSpan(
     "fleet.getFleets",
@@ -30,10 +45,68 @@ export async function getFleets(
     },
     async (span) => {
       try {
+        const conditions = [eq(fleets.organizationId, organizationId)];
+
+        if (filters?.customerId) {
+          conditions.push(eq(fleets.customerId, filters.customerId));
+        }
+
+        if (filters?.filters && filters.filters.length > 0) {
+          const filterConditions = filters.filters
+            .map((filter) => {
+              const searchPattern = `%${filter.value}%`;
+
+              if (filter.column === "fleetName") {
+                return sql`${fleets.name} ILIKE ${searchPattern}`;
+              } else if (filter.column === "fleetDescription") {
+                return sql`COALESCE(${fleets.description}, '') ILIKE ${searchPattern}`;
+              } else {
+                // For vehicle-specific columns, check if any vehicle in the fleet matches
+                switch (filter.column) {
+                  case "licensePlate":
+                    return sql`EXISTS (
+                    SELECT 1 FROM ${vehicles}
+                    WHERE ${vehicles.fleetId} = ${fleets.id}
+                      AND ${vehicles.organizationId} = ${fleets.organizationId}
+                      AND COALESCE(${vehicles.licensePlate}, '') ILIKE ${searchPattern}
+                  )`;
+                  case "vin":
+                    return sql`EXISTS (
+                    SELECT 1 FROM ${vehicles}
+                    WHERE ${vehicles.fleetId} = ${fleets.id}
+                      AND ${vehicles.organizationId} = ${fleets.organizationId}
+                      AND COALESCE(${vehicles.vin}, '') ILIKE ${searchPattern}
+                  )`;
+                  case "make":
+                    return sql`EXISTS (
+                    SELECT 1 FROM ${vehicles}
+                    WHERE ${vehicles.fleetId} = ${fleets.id}
+                      AND ${vehicles.organizationId} = ${fleets.organizationId}
+                      AND COALESCE(${vehicles.make}, '') ILIKE ${searchPattern}
+                  )`;
+                  case "model":
+                    return sql`EXISTS (
+                    SELECT 1 FROM ${vehicles}
+                    WHERE ${vehicles.fleetId} = ${fleets.id}
+                      AND ${vehicles.organizationId} = ${fleets.organizationId}
+                      AND COALESCE(${vehicles.model}, '') ILIKE ${searchPattern}
+                  )`;
+                  default:
+                    return null;
+                }
+              }
+            })
+            .filter((c): c is ReturnType<typeof sql> => c !== null);
+
+          if (filterConditions.length > 0) {
+            conditions.push(and(...filterConditions)!);
+          }
+        }
+
         const result = await db
           .select()
           .from(fleets)
-          .where(eq(fleets.organizationId, organizationId));
+          .where(and(...conditions));
 
         span.setAttribute("result.count", result.length);
         return ok(result);

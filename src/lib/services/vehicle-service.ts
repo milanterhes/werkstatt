@@ -3,19 +3,25 @@ import { vehicles } from "@/lib/db/customer-schema";
 import type { Vehicle, VehicleInput } from "@/lib/db/schemas";
 import { BaseError, DatabaseError, NotFoundError } from "@/lib/errors";
 import { serviceTracer } from "@/lib/tracer";
-import { ok, err, Result } from "neverthrow";
 import { SpanStatusCode } from "@opentelemetry/api";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { err, ok, Result } from "neverthrow";
 
 export type { VehicleInput };
 
 /**
  * Filters for vehicle queries.
  */
+export interface VehicleFilter {
+  column: string;
+  value: string;
+}
+
 export interface VehicleFilters {
   customerId?: string;
   fleetId?: string;
+  filters?: VehicleFilter[];
 }
 
 /**
@@ -62,6 +68,30 @@ export async function getVehicles(
 
         if (filters?.fleetId) {
           conditions.push(eq(vehicles.fleetId, filters.fleetId));
+        }
+
+        if (filters?.filters && filters.filters.length > 0) {
+          const filterConditions = filters.filters
+            .map((filter) => {
+              const searchPattern = `%${filter.value}%`;
+              switch (filter.column) {
+                case "licensePlate":
+                  return sql`COALESCE(${vehicles.licensePlate}, '') ILIKE ${searchPattern}`;
+                case "vin":
+                  return sql`COALESCE(${vehicles.vin}, '') ILIKE ${searchPattern}`;
+                case "make":
+                  return sql`COALESCE(${vehicles.make}, '') ILIKE ${searchPattern}`;
+                case "model":
+                  return sql`COALESCE(${vehicles.model}, '') ILIKE ${searchPattern}`;
+                default:
+                  return null;
+              }
+            })
+            .filter((c): c is ReturnType<typeof sql> => c !== null);
+
+          if (filterConditions.length > 0) {
+            conditions.push(and(...filterConditions)!);
+          }
         }
 
         const result = await db

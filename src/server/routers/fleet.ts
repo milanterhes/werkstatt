@@ -6,24 +6,50 @@ import {
   getFleetById,
   getFleets,
   updateFleet,
+  type FleetFilters,
 } from "@/lib/services/fleet-service";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { protectedProcedure, router } from "../trpc/trpc";
 
 export const fleetRouter = router({
-  list: protectedProcedure.query(async ({ ctx }) => {
-    const result = await getFleets(ctx.activeOrganizationId);
-    return result.match(
-      (value) => value,
-      (error) => {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error.message,
-        });
+  list: protectedProcedure
+    .input(
+      z
+        .object({
+          customerId: z.string().optional(),
+          filters: z
+            .array(
+              z.object({
+                column: z.string(),
+                value: z.string(),
+              })
+            )
+            .optional(),
+        })
+        .optional()
+        .default({})
+    )
+    .query(async ({ ctx, input }) => {
+      const filters: FleetFilters = {};
+      if (input?.customerId) {
+        filters.customerId = input.customerId;
       }
-    );
-  }),
+      if (input?.filters) {
+        filters.filters = input.filters;
+      }
+
+      const result = await getFleets(ctx.activeOrganizationId, filters);
+      return result.match(
+        (value) => value,
+        (error) => {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: error.message,
+          });
+        }
+      );
+    }),
 
   getById: protectedProcedure
     .input(z.object({ id: z.string() }))

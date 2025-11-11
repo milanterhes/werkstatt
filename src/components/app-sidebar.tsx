@@ -20,7 +20,6 @@ import {
   Settings,
   Truck,
   Users,
-  Warehouse,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -41,11 +40,6 @@ const mainItems = [
     title: "Vehicles",
     url: "/vehicles",
     icon: Truck,
-  },
-  {
-    title: "Fleets",
-    url: "/fleets",
-    icon: Warehouse,
   },
   {
     title: "Work Orders",

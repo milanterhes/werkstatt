@@ -19,6 +19,14 @@ export const vehicleRouter = router({
         .object({
           customerId: z.string().optional(),
           fleetId: z.string().optional(),
+          filters: z
+            .array(
+              z.object({
+                column: z.string(),
+                value: z.string(),
+              })
+            )
+            .optional(),
         })
         .optional()
         .default({})
@@ -30,6 +38,9 @@ export const vehicleRouter = router({
       }
       if (input?.fleetId) {
         filters.fleetId = input.fleetId;
+      }
+      if (input?.filters) {
+        filters.filters = input.filters;
       }
 
       const result = await getVehicles(ctx.activeOrganizationId, filters);
