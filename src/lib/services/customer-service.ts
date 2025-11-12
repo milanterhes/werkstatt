@@ -2,6 +2,7 @@ import db from "@/lib/db";
 import { customers } from "@/lib/db/customer-schema";
 import type { Customer, CustomerInput } from "@/lib/db/schemas";
 import { BaseError, DatabaseError, NotFoundError } from "@/lib/errors";
+import { checkCustomerLimit } from "@/lib/services/organization-limits-service";
 import { serviceTracer } from "@/lib/tracer";
 import { SpanStatusCode } from "@opentelemetry/api";
 import { ok, err, Result } from "neverthrow";
@@ -190,6 +191,12 @@ export async function createCustomer(
     },
     async (span) => {
       try {
+        // Check customer limit before creation
+        const limitCheck = await checkCustomerLimit(organizationId);
+        if (limitCheck.isErr()) {
+          return err(limitCheck.error);
+        }
+
         // Clean up empty strings to null for optional fields
         const cleanedData = Object.fromEntries(
           Object.entries(data).map(([key, value]) => [

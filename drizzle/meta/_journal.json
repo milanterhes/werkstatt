@@ -43,6 +43,27 @@
       "when": 1762254770274,
       "tag": "0005_sudden_zuras",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1762904521029,
+      "tag": "0006_fearless_kate_bishop",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1762904783148,
+      "tag": "0007_safe_gateway",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1762905000000,
+      "tag": "0008_refactor_work_orders_to_items",
+      "breakpoints": true
     }
   ]
 }

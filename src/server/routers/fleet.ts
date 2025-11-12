@@ -1,5 +1,5 @@
 import { fleetFormSchema } from "@/lib/db/schemas";
-import { NotFoundError } from "@/lib/errors";
+import { LimitExceededError, NotFoundError } from "@/lib/errors";
 import {
   createFleet,
   deleteFleet,
@@ -79,6 +79,12 @@ export const fleetRouter = router({
       return result.match(
         (value) => value,
         (error) => {
+          if (error instanceof LimitExceededError) {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: error.message,
+            });
+          }
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: error.message,

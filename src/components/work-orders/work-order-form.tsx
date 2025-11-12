@@ -79,14 +79,14 @@ export function WorkOrderForm({ initialData }: WorkOrderFormProps) {
     disabled: createMutation.isPending || updateMutation.isPending,
     defaultValues: {
       status: "draft",
-      parts: [],
+      items: initialData?.items || [],
       ...initialData,
     },
   });
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
-    name: "parts",
+    name: "items",
   });
 
   React.useEffect(() => {
@@ -107,14 +107,12 @@ export function WorkOrderForm({ initialData }: WorkOrderFormProps) {
         completedDate: initialData.completedDate
           ? new Date(initialData.completedDate).toISOString().split("T")[0]
           : null,
-        laborCosts: initialData.laborCosts || null,
-        laborHours: initialData.laborHours || null,
-        parts: initialData.parts || [],
+        items: initialData.items || [],
       });
     } else {
       form.reset({
         status: "draft",
-        parts: [],
+        items: [],
       });
     }
   }, [initialData, form]);
@@ -123,7 +121,7 @@ export function WorkOrderForm({ initialData }: WorkOrderFormProps) {
     const submitData: WorkOrderFormInput = {
       ...values,
       status: values.status || "draft",
-      parts: values.parts || [],
+      items: values.items ?? [],
       createdDate: values.createdDate
         ? new Date(values.createdDate).toISOString()
         : null,
@@ -131,8 +129,6 @@ export function WorkOrderForm({ initialData }: WorkOrderFormProps) {
       completedDate: values.completedDate
         ? new Date(values.completedDate).toISOString()
         : null,
-      laborCosts: values.laborCosts ? Number(values.laborCosts) : null,
-      laborHours: values.laborHours ? Number(values.laborHours) : null,
     };
 
     if (isEditing) {
@@ -142,27 +138,18 @@ export function WorkOrderForm({ initialData }: WorkOrderFormProps) {
     }
   }
 
-  // Watch parts array for reactive updates
-  const watchedParts = useWatch({
+  // Watch items array for reactive updates
+  const watchedItems = useWatch({
     control: form.control,
-    name: "parts",
+    name: "items",
     defaultValue: [],
   });
 
-  // Calculate parts totals
-  const partsTotal = React.useMemo(() => {
-    const parts = watchedParts || [];
-    return {
-      buyPrice: parts.reduce(
-        (sum, part) => sum + (Number(part.buyPrice) || 0),
-        0
-      ),
-      customerPrice: parts.reduce(
-        (sum, part) => sum + (Number(part.customerPrice) || 0),
-        0
-      ),
-    };
-  }, [watchedParts]);
+  // Calculate items totals
+  const itemsTotal = React.useMemo(() => {
+    const items = watchedItems || [];
+    return items.reduce((sum, item) => sum + (Number(item.totalPrice) || 0), 0);
+  }, [watchedItems]);
 
   // Helper function to get fleet name
   const getFleetName = React.useCallback(
@@ -220,6 +207,57 @@ export function WorkOrderForm({ initialData }: WorkOrderFormProps) {
       );
     });
   }, [vehicles, vehicleSearchQuery, getFleetName]);
+
+  // Handle adding new item with type-based defaults
+  const handleAddItem = (type: "labor" | "part" | "other") => {
+    const defaultUnitType =
+      type === "labor" ? "hours" : type === "part" ? "pieces" : "";
+    append({
+      type,
+      description: "",
+      quantity: 1,
+      unitType: defaultUnitType,
+      unitPrice: 0,
+      totalPrice: 0,
+      notes: "",
+      ...(type === "part" && { partNumber: "", buyPrice: 0 }),
+      ...(type === "labor" && { hours: 1, rate: 0 }),
+    });
+  };
+
+  // Handle item type change - update unit type if needed
+  const handleItemTypeChange = (
+    index: number,
+    newType: "labor" | "part" | "other"
+  ) => {
+    const currentItem = form.getValues(`items.${index}`);
+    const defaultUnitType =
+      newType === "labor" ? "hours" : newType === "part" ? "pieces" : "";
+
+    form.setValue(`items.${index}.type`, newType);
+    if (!currentItem.unitType || currentItem.unitType === "") {
+      form.setValue(`items.${index}.unitType`, defaultUnitType);
+    }
+
+    // Clear conditional fields when switching types
+    if (newType !== "part") {
+      form.setValue(`items.${index}.partNumber`, undefined);
+      form.setValue(`items.${index}.buyPrice`, undefined);
+    }
+    if (newType !== "labor") {
+      form.setValue(`items.${index}.hours`, undefined);
+      form.setValue(`items.${index}.rate`, undefined);
+    }
+  };
+
+  // Calculate total price when quantity or unit price changes
+  const handleQuantityOrPriceChange = (index: number) => {
+    const item = form.getValues(`items.${index}`);
+    const quantity = Number(item.quantity) || 0;
+    const unitPrice = Number(item.unitPrice) || 0;
+    const totalPrice = quantity * unitPrice;
+    form.setValue(`items.${index}.totalPrice`, totalPrice);
+  };
 
   return (
     <div className="space-y-6">
@@ -446,30 +484,6 @@ export function WorkOrderForm({ initialData }: WorkOrderFormProps) {
               </FieldError>
             </Field>
 
-            <Field>
-              <FieldLabel>Labor Costs</FieldLabel>
-              <Input
-                type="number"
-                step="0.01"
-                {...form.register("laborCosts", { valueAsNumber: true })}
-              />
-              <FieldError>
-                {form.formState.errors.laborCosts?.message}
-              </FieldError>
-            </Field>
-
-            <Field>
-              <FieldLabel>Labor Hours</FieldLabel>
-              <Input
-                type="number"
-                step="0.1"
-                {...form.register("laborHours", { valueAsNumber: true })}
-              />
-              <FieldError>
-                {form.formState.errors.laborHours?.message}
-              </FieldError>
-            </Field>
-
             <Field className="md:col-span-2">
               <FieldLabel>Notes</FieldLabel>
               <Textarea {...form.register("notes")} rows={3} />
@@ -477,117 +491,301 @@ export function WorkOrderForm({ initialData }: WorkOrderFormProps) {
             </Field>
           </div>
 
-          {/* Parts Section */}
+          {/* Items Section */}
           <div className="mt-6 space-y-4">
             <div className="flex justify-between items-center">
-              <FieldLabel>Parts</FieldLabel>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  append({
-                    partNumber: "",
-                    buyPrice: 0,
-                    customerPrice: 0,
-                  })
-                }
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Part
-              </Button>
+              <FieldLabel>Items</FieldLabel>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleAddItem("labor")}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Labor
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleAddItem("part")}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Part
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleAddItem("other")}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Other
+                </Button>
+              </div>
             </div>
 
             {fields.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No parts added. Click &quot;Add Part&quot; to add parts to this
-                work order.
+                No items added. Click &quot;Add Labor&quot;, &quot;Add
+                Part&quot;, or &quot;Add Other&quot; to add items to this work
+                order.
               </p>
             ) : (
               <div className="space-y-4">
-                {fields.map((field, index) => (
-                  <div
-                    key={field.id}
-                    className="grid gap-4 md:grid-cols-4 border p-4 rounded-lg"
-                  >
-                    <Field>
-                      <FieldLabel>Part Number</FieldLabel>
-                      <Input
-                        {...form.register(`parts.${index}.partNumber`)}
-                        placeholder="Part number"
-                      />
-                      <FieldError>
-                        {
-                          form.formState.errors.parts?.[index]?.partNumber
-                            ?.message
-                        }
-                      </FieldError>
-                    </Field>
+                {fields.map((field, index) => {
+                  const itemType = watchedItems?.[index]?.type || "other";
+                  return (
+                    <div
+                      key={field.id}
+                      className="border p-4 rounded-lg space-y-4"
+                    >
+                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                        <Field>
+                          <FieldLabel>Type *</FieldLabel>
+                          <Controller
+                            name={`items.${index}.type`}
+                            control={form.control}
+                            render={({ field }) => (
+                              <Select
+                                value={field.value}
+                                onValueChange={(value) => {
+                                  field.onChange(value);
+                                  handleItemTypeChange(
+                                    index,
+                                    value as "labor" | "part" | "other"
+                                  );
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="labor">Labor</SelectItem>
+                                  <SelectItem value="part">Part</SelectItem>
+                                  <SelectItem value="other">Other</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )}
+                          />
+                          <FieldError>
+                            {
+                              form.formState.errors.items?.[index]?.type
+                                ?.message
+                            }
+                          </FieldError>
+                        </Field>
 
-                    <Field>
-                      <FieldLabel>Buy Price</FieldLabel>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        {...form.register(`parts.${index}.buyPrice`, {
-                          valueAsNumber: true,
-                        })}
-                        placeholder="0.00"
-                      />
-                      <FieldError>
-                        {
-                          form.formState.errors.parts?.[index]?.buyPrice
-                            ?.message
-                        }
-                      </FieldError>
-                    </Field>
+                        <Field className="md:col-span-2">
+                          <FieldLabel>Description *</FieldLabel>
+                          <Input
+                            {...form.register(`items.${index}.description`)}
+                            placeholder="Item description"
+                          />
+                          <FieldError>
+                            {
+                              form.formState.errors.items?.[index]?.description
+                                ?.message
+                            }
+                          </FieldError>
+                        </Field>
 
-                    <Field>
-                      <FieldLabel>Customer Price</FieldLabel>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        {...form.register(`parts.${index}.customerPrice`, {
-                          valueAsNumber: true,
-                        })}
-                        placeholder="0.00"
-                      />
-                      <FieldError>
-                        {
-                          form.formState.errors.parts?.[index]?.customerPrice
-                            ?.message
-                        }
-                      </FieldError>
-                    </Field>
+                        <Field className="flex items-end">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => remove(index)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </Field>
+                      </div>
 
-                    <Field className="flex items-end">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => remove(index)}
-                        className="text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </Field>
-                  </div>
-                ))}
+                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                        <Field>
+                          <FieldLabel>Quantity *</FieldLabel>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            {...form.register(`items.${index}.quantity`, {
+                              valueAsNumber: true,
+                            })}
+                            onChange={(e) => {
+                              form
+                                .register(`items.${index}.quantity`)
+                                .onChange(e);
+                              handleQuantityOrPriceChange(index);
+                            }}
+                            placeholder="0"
+                          />
+                          <FieldError>
+                            {
+                              form.formState.errors.items?.[index]?.quantity
+                                ?.message
+                            }
+                          </FieldError>
+                        </Field>
+
+                        <Field>
+                          <FieldLabel>Unit Type *</FieldLabel>
+                          <Input
+                            {...form.register(`items.${index}.unitType`)}
+                            placeholder="e.g., hours, pieces, each"
+                          />
+                          <FieldError>
+                            {
+                              form.formState.errors.items?.[index]?.unitType
+                                ?.message
+                            }
+                          </FieldError>
+                        </Field>
+
+                        <Field>
+                          <FieldLabel>Unit Price *</FieldLabel>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            {...form.register(`items.${index}.unitPrice`, {
+                              valueAsNumber: true,
+                            })}
+                            onChange={(e) => {
+                              form
+                                .register(`items.${index}.unitPrice`)
+                                .onChange(e);
+                              handleQuantityOrPriceChange(index);
+                            }}
+                            placeholder="0.00"
+                          />
+                          <FieldError>
+                            {
+                              form.formState.errors.items?.[index]?.unitPrice
+                                ?.message
+                            }
+                          </FieldError>
+                        </Field>
+
+                        <Field>
+                          <FieldLabel>Total Price *</FieldLabel>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            {...form.register(`items.${index}.totalPrice`, {
+                              valueAsNumber: true,
+                            })}
+                            placeholder="0.00"
+                          />
+                          <FieldError>
+                            {
+                              form.formState.errors.items?.[index]?.totalPrice
+                                ?.message
+                            }
+                          </FieldError>
+                        </Field>
+                      </div>
+
+                      {/* Conditional fields for parts */}
+                      {itemType === "part" && (
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <Field>
+                            <FieldLabel>Part Number *</FieldLabel>
+                            <Input
+                              {...form.register(`items.${index}.partNumber`)}
+                              placeholder="Part number"
+                            />
+                            <FieldError>
+                              {
+                                form.formState.errors.items?.[index]?.partNumber
+                                  ?.message
+                              }
+                            </FieldError>
+                          </Field>
+
+                          <Field>
+                            <FieldLabel>Buy Price (Cost)</FieldLabel>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              {...form.register(`items.${index}.buyPrice`, {
+                                valueAsNumber: true,
+                              })}
+                              placeholder="0.00"
+                            />
+                            <FieldError>
+                              {
+                                form.formState.errors.items?.[index]?.buyPrice
+                                  ?.message
+                              }
+                            </FieldError>
+                          </Field>
+                        </div>
+                      )}
+
+                      {/* Conditional fields for labor */}
+                      {itemType === "labor" && (
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <Field>
+                            <FieldLabel>Hours</FieldLabel>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              {...form.register(`items.${index}.hours`, {
+                                valueAsNumber: true,
+                              })}
+                              placeholder="0.0"
+                            />
+                            <FieldError>
+                              {
+                                form.formState.errors.items?.[index]?.hours
+                                  ?.message
+                              }
+                            </FieldError>
+                          </Field>
+
+                          <Field>
+                            <FieldLabel>Rate (per hour)</FieldLabel>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              {...form.register(`items.${index}.rate`, {
+                                valueAsNumber: true,
+                              })}
+                              placeholder="0.00"
+                            />
+                            <FieldError>
+                              {
+                                form.formState.errors.items?.[index]?.rate
+                                  ?.message
+                              }
+                            </FieldError>
+                          </Field>
+                        </div>
+                      )}
+
+                      {/* Notes field for all item types */}
+                      <Field>
+                        <FieldLabel>Notes</FieldLabel>
+                        <Textarea
+                          {...form.register(`items.${index}.notes`)}
+                          rows={2}
+                          placeholder="Additional notes (optional)"
+                        />
+                        <FieldError>
+                          {form.formState.errors.items?.[index]?.notes?.message}
+                        </FieldError>
+                      </Field>
+                    </div>
+                  );
+                })}
 
                 {fields.length > 0 && (
                   <div className="flex justify-end gap-4 pt-2 border-t">
                     <div className="text-sm">
-                      <span className="font-medium">Total Buy Price: </span>
+                      <span className="font-medium">Grand Total: </span>
                       <span className="text-muted-foreground">
-                        €{partsTotal.buyPrice.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="text-sm">
-                      <span className="font-medium">
-                        Total Customer Price:{" "}
-                      </span>
-                      <span className="text-muted-foreground">
-                        €{partsTotal.customerPrice.toFixed(2)}
+                        €{itemsTotal.toFixed(2)}
                       </span>
                     </div>
                   </div>

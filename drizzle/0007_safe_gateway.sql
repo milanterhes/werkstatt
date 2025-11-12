@@ -1,0 +1,1 @@
+ALTER TABLE "organization_limits" ADD COLUMN "max_customers" integer DEFAULT 200 NOT NULL;

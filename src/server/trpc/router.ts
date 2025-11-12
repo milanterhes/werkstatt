@@ -1,3 +1,4 @@
+import { adminRouter } from "../routers/admin";
 import { customerRouter } from "../routers/customer";
 import { fleetRouter } from "../routers/fleet";
 import { vehicleRouter } from "../routers/vehicle";
@@ -26,6 +27,7 @@ export const appRouter = router({
   fleets: fleetRouter,
   workshop: workshopRouter,
   workOrders: workOrderRouter,
+  admin: adminRouter,
 });
 
 /**

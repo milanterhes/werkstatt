@@ -15,12 +15,15 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { customerFormSchema, type CustomerFormInput } from "@/lib/db/schemas";
 import { trpc } from "@/lib/trpc";
+import { authClient } from "@/lib/auth-client";
 
 interface CustomerFormProps {
   open: boolean;
@@ -35,6 +38,25 @@ export function CustomerForm({
 }: CustomerFormProps) {
   const isEditing = !!initialData?.id;
   const utils = trpc.useUtils();
+  const activeOrganization = authClient.useActiveOrganization();
+
+  // Fetch limits and usage only when creating (not editing)
+  const { data: limits } = trpc.admin.getLimits.useQuery(
+    { organizationId: activeOrganization.data?.id ?? "" },
+    { enabled: !isEditing && !!activeOrganization.data?.id }
+  );
+
+  const { data: usage } = trpc.admin.getUsage.useQuery(
+    { organizationId: activeOrganization.data?.id ?? "" },
+    { enabled: !isEditing && !!activeOrganization.data?.id }
+  );
+
+  // Check if customer limit is reached
+  const isLimitReached =
+    !isEditing &&
+    limits &&
+    usage &&
+    usage.customerCount >= limits.maxCustomers;
 
   const createMutation = trpc.customers.create.useMutation({
     onSuccess: () => {
@@ -108,6 +130,17 @@ export function CustomerForm({
               : "Add a new customer to your system"}
           </DialogDescription>
         </DialogHeader>
+        {isLimitReached && (
+          <Alert variant="destructive">
+            <AlertCircle />
+            <AlertTitle>Customer Limit Reached</AlertTitle>
+            <AlertDescription>
+              You have reached your customer limit ({usage?.customerCount}/
+              {limits?.maxCustomers}). Please contact your administrator to
+              increase your limit.
+            </AlertDescription>
+          </Alert>
+        )}
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <FieldGroup>
             <div className="grid gap-4 md:grid-cols-2">
@@ -176,7 +209,11 @@ export function CustomerForm({
               </Button>
               <Button
                 type="submit"
-                disabled={createMutation.isPending || updateMutation.isPending}
+                disabled={
+                  createMutation.isPending ||
+                  updateMutation.isPending ||
+                  isLimitReached
+                }
               >
                 {createMutation.isPending || updateMutation.isPending ? (
                   <Spinner />

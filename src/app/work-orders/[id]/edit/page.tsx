@@ -58,14 +58,7 @@ export default function EditWorkOrderPage() {
     completedDate: workOrder.completedDate
       ? new Date(workOrder.completedDate).toISOString().split("T")[0]
       : undefined,
-    laborCosts: workOrder.laborCosts ?? undefined,
-    laborHours: workOrder.laborHours ?? undefined,
-    parts:
-      (workOrder.parts as Array<{
-        partNumber: string;
-        buyPrice: number;
-        customerPrice: number;
-      }>) || [],
+    items: workOrder.items || [],
   };
 
   return (

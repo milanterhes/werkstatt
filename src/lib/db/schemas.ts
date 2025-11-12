@@ -10,6 +10,7 @@ import {
 } from "drizzle-zod";
 import { z } from "zod";
 import { customers, fleets, vehicles } from "./customer-schema";
+import { organizationLimits } from "./organization-limits-schema";
 import { workOrders } from "./work-order-schema";
 import { workshopDetails } from "./workshop-schema";
 
@@ -123,14 +124,38 @@ export const workOrderSelectSchema = createSelectSchema(workOrders);
 export const workOrderInsertSchema = createInsertSchema(workOrders);
 export const workOrderUpdateSchema = createUpdateSchema(workOrders);
 
-// Part schema for validation
-const partSchema = z.object({
-  partNumber: z.string().min(1, "Part number is required"),
-  buyPrice: z.number().min(0, "Buy price must be positive"),
-  customerPrice: z.number().min(0, "Customer price must be positive"),
-});
+// Item schema for validation
+const workOrderItemSchema = z
+  .object({
+    type: z.enum(["labor", "part", "other"]),
+    description: z.string().min(1, "Description is required"),
+    quantity: z.number().min(0, "Quantity must be positive"),
+    unitType: z.string().min(1, "Unit type is required"),
+    unitPrice: z.number().min(0, "Unit price must be positive"),
+    totalPrice: z.number().min(0, "Total price must be positive"),
+    notes: z.string().optional(),
+    // For parts
+    partNumber: z.string().optional(),
+    buyPrice: z.number().min(0).optional(),
+    // For labor
+    hours: z.number().min(0).optional(),
+    rate: z.number().min(0).optional(),
+  })
+  .refine(
+    (data) => {
+      // For "part" type, partNumber and buyPrice should be provided
+      if (data.type === "part") {
+        return data.partNumber !== undefined && data.partNumber !== "";
+      }
+      return true;
+    },
+    {
+      message: "Part number is required for part items",
+      path: ["partNumber"],
+    }
+  );
 
-// Work Order form schema (excludes generated fields, handles date strings and parts validation)
+// Work Order form schema (excludes generated fields, handles date strings and items validation)
 export const workOrderFormSchema = workOrderInsertSchema
   .omit({
     id: true,
@@ -138,6 +163,7 @@ export const workOrderFormSchema = workOrderInsertSchema
     createdAt: true,
     updatedAt: true,
     status: true, // Omit and redefine with enum
+    items: true, // Omit and redefine to ensure it's required
   })
   .extend({
     status: z
@@ -146,9 +172,7 @@ export const workOrderFormSchema = workOrderInsertSchema
     createdDate: z.string().optional().nullable(), // Accept string for date input
     dueDate: z.string().optional().nullable(), // Accept string for date input
     completedDate: z.string().optional().nullable(), // Accept string for date input
-    laborCosts: z.number().optional().nullable(),
-    laborHours: z.number().optional().nullable(),
-    parts: z.array(partSchema).optional(),
+    items: z.array(workOrderItemSchema),
   });
 
 export type WorkOrder = typeof workOrders.$inferSelect;

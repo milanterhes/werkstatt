@@ -139,6 +139,32 @@ export class ConflictError extends ErrorFactory({
 }) {}
 
 /**
+ * Error thrown when an organization limit is exceeded.
+ * HTTP Status: 403
+ */
+export class LimitExceededError extends ErrorFactory({
+  name: "LimitExceededError",
+  message: (fields: {
+    code: string;
+    statusCode: number;
+    customMessage?: string;
+    limitType?: string;
+    currentUsage?: number;
+    limit?: number;
+    metadata?: Record<string, unknown>;
+  }) => fields.customMessage ?? "Organization limit exceeded",
+  fields: ErrorFactory.fields<{
+    code: string;
+    statusCode: number;
+    customMessage?: string;
+    limitType?: string;
+    currentUsage?: number;
+    limit?: number;
+    metadata?: Record<string, unknown>;
+  }>(),
+}) {}
+
+/**
  * Type guard to check if an error is a BaseError instance.
  */
 export function isBaseError(error: unknown): error is BaseError {

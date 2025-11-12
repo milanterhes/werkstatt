@@ -2,6 +2,7 @@ import db from "@/lib/db";
 import { fleets, vehicles } from "@/lib/db/customer-schema";
 import type { Fleet, FleetInput } from "@/lib/db/schemas";
 import { BaseError, DatabaseError, NotFoundError } from "@/lib/errors";
+import { checkFleetLimit } from "@/lib/services/organization-limits-service";
 import { serviceTracer } from "@/lib/tracer";
 import { SpanStatusCode } from "@opentelemetry/api";
 import { and, eq, sql } from "drizzle-orm";
@@ -226,6 +227,12 @@ export async function createFleet(
     },
     async (span) => {
       try {
+        // Check fleet limit before creation
+        const limitCheck = await checkFleetLimit(organizationId);
+        if (limitCheck.isErr()) {
+          return err(limitCheck.error);
+        }
+
         // Clean up empty strings to null for optional fields
         const cleanedData = Object.fromEntries(
           Object.entries(data).map(([key, value]) => [

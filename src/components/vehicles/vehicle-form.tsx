@@ -22,12 +22,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { vehicleFormSchema, type VehicleFormInput } from "@/lib/db/schemas";
 import { trpc } from "@/lib/trpc";
+import { authClient } from "@/lib/auth-client";
 
 interface VehicleFormProps {
   open: boolean;
@@ -42,10 +45,29 @@ export function VehicleForm({
 }: VehicleFormProps) {
   const isEditing = !!initialData?.id;
   const utils = trpc.useUtils();
+  const activeOrganization = authClient.useActiveOrganization();
 
   const { data: customers = [] } = trpc.customers.list.useQuery();
 
   const { data: fleets = [] } = trpc.fleets.list.useQuery();
+
+  // Fetch limits and usage only when creating (not editing)
+  const { data: limits } = trpc.admin.getLimits.useQuery(
+    { organizationId: activeOrganization.data?.id ?? "" },
+    { enabled: !isEditing && !!activeOrganization.data?.id }
+  );
+
+  const { data: usage } = trpc.admin.getUsage.useQuery(
+    { organizationId: activeOrganization.data?.id ?? "" },
+    { enabled: !isEditing && !!activeOrganization.data?.id }
+  );
+
+  // Check if vehicle limit is reached
+  const isLimitReached =
+    !isEditing &&
+    limits &&
+    usage &&
+    usage.vehicleCount >= limits.maxVehicles;
 
   const createMutation = trpc.vehicles.create.useMutation({
     onSuccess: () => {
@@ -144,6 +166,17 @@ export function VehicleForm({
               : "Add a new vehicle to your system"}
           </DialogDescription>
         </DialogHeader>
+        {isLimitReached && (
+          <Alert variant="destructive">
+            <AlertCircle />
+            <AlertTitle>Vehicle Limit Reached</AlertTitle>
+            <AlertDescription>
+              You have reached your vehicle limit ({usage?.vehicleCount}/
+              {limits?.maxVehicles}). Please contact your administrator to
+              increase your limit.
+            </AlertDescription>
+          </Alert>
+        )}
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <FieldGroup>
             <div className="grid gap-4 md:grid-cols-2">
@@ -296,7 +329,11 @@ export function VehicleForm({
               </Button>
               <Button
                 type="submit"
-                disabled={createMutation.isPending || updateMutation.isPending}
+                disabled={
+                  createMutation.isPending ||
+                  updateMutation.isPending ||
+                  isLimitReached
+                }
               >
                 {createMutation.isPending || updateMutation.isPending ? (
                   <Spinner />

@@ -9,7 +9,7 @@ import { customerFormSchema } from "@/lib/db/schemas";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { protectedProcedure, router } from "../trpc/trpc";
-import { NotFoundError } from "@/lib/errors";
+import { LimitExceededError, NotFoundError } from "@/lib/errors";
 
 export const customerRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
@@ -53,6 +53,12 @@ export const customerRouter = router({
       return result.match(
         (value) => value,
         (error) => {
+          if (error instanceof LimitExceededError) {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: error.message,
+            });
+          }
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: error.message,
